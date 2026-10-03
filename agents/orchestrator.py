@@ -18,10 +18,10 @@ from agents.contradiction import ContradictionAgent
 from agents.controls import ControlAgent
 from agents.gaps import GapAgent
 from agents.impact import ChangeAgent
+from agents.ingestion import IngestionAgent
 from agents.mapping import MappingAgent
 from agents.obligations import ObligationAgent
 from db.connection import get_connection
-from extract.sectioner import run as ingest_regulation
 
 ROOT = Path(__file__).resolve().parent.parent
 REG_DIR = ROOT / "data" / "regulations"
@@ -63,27 +63,17 @@ def run_pipeline(emit=None):
         _reset(conn)
 
         # ---- Ingestion -------------------------------------------------
-        emit(agent="IngestionAgent", stage="ingestion", event="start")
         sources = sorted(REG_DIR.glob("*.txt")) + sorted(REG_DIR.glob("*.pdf"))
         sources = [s for s in sources if not s.name.startswith("prior-")]
         if not sources:
             raise RuntimeError("No regulation sources found in data/regulations")
 
-        reg_ids = []
-        for src in sources:
-            ingest_regulation(src, dry_run=False, conn=conn)
-            emit(agent="IngestionAgent", stage="ingestion", event="progress",
-                 message=f"ingested {src.name}")
+        IngestionAgent(run_id, emit).run(conn, sources=sources)
 
         with conn.cursor() as cur:
             cur.execute("SELECT id, title FROM regulation ORDER BY ingested_at")
             regs = cur.fetchall()
             reg_ids = [r[0] for r in regs]
-            cur.execute("SELECT COUNT(*) FROM reg_section")
-            section_count = cur.fetchone()[0]
-
-        emit(agent="IngestionAgent", stage="ingestion", event="done",
-             regulations=len(regs), sections=section_count)
 
         # ---- Obligations -----------------------------------------------
         totals = {"stored": 0, "rejected": 0, "recovered": 0}

@@ -83,6 +83,9 @@ class Agent:
                     duration_ms, model,
                 ),
             )
+        # Commit here: agents call log() after their own commit, so without this
+        # the final agent in the pipeline would lose its run record on close.
+        conn.commit()
 
     def quarantine(self, conn, payload: dict, reason: str):
         """Route an unverifiable result to needs_review for human oversight."""
