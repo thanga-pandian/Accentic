@@ -71,7 +71,9 @@ def run_pipeline(emit=None):
         IngestionAgent(run_id, emit).run(conn, sources=sources)
 
         with conn.cursor() as cur:
-            cur.execute("SELECT id, title FROM regulation ORDER BY ingested_at")
+            cur.execute(
+                "SELECT id, title, source_url FROM regulation ORDER BY ingested_at"
+            )
             regs = cur.fetchall()
             reg_ids = [r[0] for r in regs]
 
@@ -97,8 +99,10 @@ def run_pipeline(emit=None):
         # ---- Change intelligence ----------------------------------------
         # Pair each prior-*.txt with the regulation it supersedes by filename stem.
         for prior in sorted(REG_DIR.glob("prior-*.txt")):
-            target_stem = prior.stem.replace("prior-", "")
-            match = next((rid for rid, title in regs if title == target_stem), None)
+            target = prior.name.replace("prior-", "")
+            match = next(
+                (rid for rid, _t, src in regs if src and Path(src).name == target), None
+            )
             if match:
                 ChangeAgent(run_id, emit).run(
                     conn, regulation_id=match, prior_path=prior

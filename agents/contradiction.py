@@ -40,6 +40,16 @@ _SUBJECTS = {
 
 _TO_DAYS = {"day": 1, "days": 1, "month": 30, "months": 30, "year": 365, "years": 365}
 
+# str.title() would render these as "Str Filing" / "Pep Approval".
+_SUBJECT_LABELS = {
+    "str_filing": "STR filing deadline",
+    "ctr_filing": "CTR filing deadline",
+    "retention": "Record retention period",
+    "pep_approval": "PEP approval requirement",
+    "cdd_threshold": "CDD transaction threshold",
+    "periodic_review": "Periodic review cycle",
+}
+
 
 def _subject(text: str) -> str | None:
     for name, pattern in _SUBJECTS.items():
@@ -57,6 +67,23 @@ def _days(text: str):
     if count is None:
         return None
     return count * _TO_DAYS[m.group(2).lower()]
+
+
+def _short(title: str) -> str:
+    """Official titles are long; cut at the first qualifier so a finding reads cleanly."""
+    head = title.split("(")[0].split(",")[0].strip(" -–—")
+    return head if len(head) <= 46 else head[:43].rstrip() + "…"
+
+
+def _humanise(days: int) -> str:
+    """'3650 days' is arithmetic; '10 years' is a finding a reviewer can act on."""
+    if days % 365 == 0:
+        n = days // 365
+        return f"{n} year{'s' if n != 1 else ''}"
+    if days % 30 == 0:
+        n = days // 30
+        return f"{n} month{'s' if n != 1 else ''}"
+    return f"{days} day{'s' if days != 1 else ''}"
 
 
 def _amount(text: str):
@@ -135,16 +162,23 @@ class ContradictionAgent(Agent):
 
         cross = reg_id_a != reg_id_b
         scope = "across regulations" if cross else "within the same regulation"
+        reg_a, reg_b = _short(reg_a), _short(reg_b)
+        subject_label = _SUBJECT_LABELS.get(subject, subject.replace("_", " ").title())
+        clause_a = f"clause {clause_a.rstrip('.')}"
+        clause_b = f"clause {clause_b.rstrip('.')}"
 
         days_a, days_b = _days(text_a), _days(text_b)
         if days_a and days_b and days_a != days_b:
             ratio = max(days_a, days_b) / min(days_a, days_b)
             if ratio >= 1.5:
+                binding = min(days_a, days_b)
+                src = f"{reg_a} {clause_a}" if days_a < days_b else f"{reg_b} {clause_b}"
                 return (
                     "conflicting_period",
-                    f"{subject.replace('_', ' ').title()} {scope}: {clause_a} "
-                    f"({reg_a}) requires {days_a} days while {clause_b} ({reg_b}) "
-                    f"requires {days_b} days. The shorter period governs.",
+                    f"{subject_label} {scope}. {reg_a} {clause_a} requires "
+                    f"{_humanise(days_a)}; {reg_b} {clause_b} requires "
+                    f"{_humanise(days_b)}. The shorter period governs — "
+                    f"{_humanise(binding)} per {src} is the binding requirement.",
                     "high" if cross else "medium",
                     0.86,
                 )
@@ -155,9 +189,9 @@ class ContradictionAgent(Agent):
             if ratio >= 1.5:
                 return (
                     "conflicting_threshold",
-                    f"{subject.replace('_', ' ').title()} {scope}: {clause_a} sets a "
-                    f"threshold of {amt_a:,.0f} while {clause_b} sets {amt_b:,.0f}. "
-                    f"Systems configured to one will breach the other.",
+                    f"{subject_label} {scope}. {reg_a} {clause_a} sets a threshold of "
+                    f"Rs {amt_a:,.0f}; {reg_b} {clause_b} sets Rs {amt_b:,.0f}. "
+                    f"A system configured to one will breach the other.",
                     "high" if cross else "medium",
                     0.83,
                 )
@@ -165,9 +199,9 @@ class ContradictionAgent(Agent):
         if {mod_a, mod_b} == {"must", "must_not"}:
             return (
                 "opposing_modality",
-                f"{subject.replace('_', ' ').title()} {scope}: {clause_a} mandates an "
-                f"action that {clause_b} prohibits. Requires a legal determination of "
-                f"precedence.",
+                f"{subject_label} {scope}. {reg_a} {clause_a} mandates an action that "
+                f"{reg_b} {clause_b} prohibits. This needs a legal determination of "
+                f"precedence before either can be automated.",
                 "critical",
                 0.74,
             )

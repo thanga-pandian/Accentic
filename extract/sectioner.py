@@ -129,8 +129,32 @@ def _split_sections(
     return sections
 
 
+def _document_identity(full_text: str, source_path: Path) -> tuple[str, str]:
+    """
+    Read the issuing body and title off the document head rather than the
+    filename, so the UI shows 'RBI · Master Direction — KYC' not 'rbi-kyc-extract'.
+    """
+    lines = [ln.strip() for ln in full_text.split("\n")[:6] if ln.strip()]
+    regulator = "RBI"
+    for line in lines[:2]:
+        if re.search(r"reserve bank", line, re.I):
+            regulator = "RBI"
+            break
+        if re.search(r"government of india|ministry|department", line, re.I):
+            regulator = "GoI"
+            break
+
+    title = next(
+        (ln for ln in lines[1:4]
+         if len(ln) > 18 and re.search(r"direction|rule|regulation|act|circular|guideline", ln, re.I)),
+        None,
+    )
+    return regulator, (title or source_path.stem)
+
+
 def _insert_regulation(conn, source_path: Path, full_text: str) -> str:
     reg_id = str(uuid.uuid4())
+    regulator, title = _document_identity(full_text, source_path)
     with conn.cursor() as cur:
         cur.execute(
             """
@@ -138,15 +162,7 @@ def _insert_regulation(conn, source_path: Path, full_text: str) -> str:
                 (id, regulator, jurisdiction, title, version, source_url, full_text)
             VALUES (%s, %s, %s, %s, %s, %s, %s)
             """,
-            (
-                reg_id,
-                "RBI",
-                "India",
-                source_path.stem,
-                None,
-                str(source_path),
-                full_text,
-            ),
+            (reg_id, regulator, "India", title, None, str(source_path), full_text),
         )
     return reg_id
 
