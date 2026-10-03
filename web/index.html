@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Accentic — Clause Viewer</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 14px;
+      background: #f5f5f5;
+      color: #222;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: #1a1a2e;
+      color: #eee;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    header h1 { font-size: 16px; font-weight: 600; }
+    header select { font-size: 13px; padding: 3px 6px; max-width: 360px; }
+
+    .layout {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* Left panel: clause list */
+    #clause-list {
+      width: 280px;
+      min-width: 200px;
+      overflow-y: auto;
+      background: #fff;
+      border-right: 1px solid #ddd;
+    }
+    #clause-list .item {
+      padding: 8px 12px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    #clause-list .item:hover { background: #f0f4ff; }
+    #clause-list .item.active { background: #dce8ff; border-left: 3px solid #2563eb; }
+    #clause-list .item .path { font-weight: 600; font-size: 13px; font-family: monospace; }
+    #clause-list .item .meta { font-size: 11px; color: #666; }
+    #clause-list .item .preview { font-size: 11px; color: #444; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* Right panel: detail */
+    #detail {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      background: #fafafa;
+    }
+    #detail .placeholder { color: #888; margin-top: 40px; text-align: center; }
+
+    #detail .clause-header {
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+      margin-bottom: 12px;
+    }
+    #detail .clause-header h2 { font-size: 20px; }
+    #detail .clause-header .page-badge {
+      background: #1a1a2e;
+      color: #eee;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+
+    .offsets {
+      font-family: monospace;
+      font-size: 12px;
+      background: #f0f0f0;
+      padding: 6px 10px;
+      border-radius: 4px;
+      margin-bottom: 16px;
+      color: #555;
+    }
+
+    .section-box {
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 14px 16px;
+      white-space: pre-wrap;
+      font-size: 13px;
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+
+    h3 { font-size: 13px; font-weight: 600; margin-bottom: 8px; color: #444; }
+
+    .context-box {
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 14px 16px;
+      white-space: pre-wrap;
+      font-size: 12px;
+      line-height: 1.6;
+      font-family: monospace;
+    }
+    .context-box .ctx-before { color: #888; }
+    .context-box .ctx-highlight { background: #fff3b0; border-radius: 2px; color: #111; font-weight: 500; }
+    .context-box .ctx-after { color: #888; }
+
+    #loading { padding: 20px; color: #666; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Accentic Clause Viewer</h1>
+  <select id="reg-select"><option value="">— loading regulations —</option></select>
+</header>
+
+<div class="layout">
+  <div id="clause-list"><div id="loading">Loading…</div></div>
+  <div id="detail"><p class="placeholder">Select a clause on the left to inspect it.</p></div>
+</div>
+
+<script>
+const regSelect = document.getElementById('reg-select');
+const clauseList = document.getElementById('clause-list');
+const detail = document.getElementById('detail');
+
+let currentSectionId = null;
+
+// ---------------------------------------------------------------------------
+// Load regulations into the dropdown
+// ---------------------------------------------------------------------------
+async function loadRegulations() {
+  const res = await fetch('/api/regulations');
+  const regs = await res.json();
+  regSelect.innerHTML = '';
+  if (!regs.length) {
+    regSelect.innerHTML = '<option value="">No regulations ingested yet</option>';
+    clauseList.innerHTML = '<div style="padding:12px;color:#888;">No data yet.</div>';
+    return;
+  }
+  regs.forEach(r => {
+    const opt = document.createElement('option');
+    opt.value = r.id;
+    opt.textContent = `${r.regulator} — ${r.title}`;
+    regSelect.appendChild(opt);
+  });
+  loadSections(regs[0].id);
+}
+
+// ---------------------------------------------------------------------------
+// Load sections for a regulation
+// ---------------------------------------------------------------------------
+async function loadSections(regulationId) {
+  clauseList.innerHTML = '<div style="padding:12px;color:#888;">Loading…</div>';
+  const res = await fetch(`/api/sections?regulation_id=${regulationId}`);
+  const sections = await res.json();
+
+  if (!sections.length) {
+    clauseList.innerHTML = '<div style="padding:12px;color:#888;">No sections found.</div>';
+    return;
+  }
+
+  clauseList.innerHTML = '';
+  sections.forEach(s => {
+    const div = document.createElement('div');
+    div.className = 'item';
+    div.dataset.id = s.id;
+    div.innerHTML = `
+      <span class="path">${escHtml(s.clause_path)}</span>
+      <span class="meta">Page ${s.page_no} &nbsp;·&nbsp; ${s.char_start.toLocaleString()}–${s.char_end.toLocaleString()}</span>
+      <span class="preview">${escHtml(s.preview || '')}</span>
+    `;
+    div.addEventListener('click', () => selectSection(s.id, div));
+    clauseList.appendChild(div);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Select and display a section
+// ---------------------------------------------------------------------------
+async function selectSection(id, el) {
+  if (currentSectionId === id) return;
+  currentSectionId = id;
+
+  document.querySelectorAll('#clause-list .item').forEach(i => i.classList.remove('active'));
+  el.classList.add('active');
+
+  detail.innerHTML = '<div style="padding:20px;color:#666;">Loading…</div>';
+
+  const res = await fetch(`/api/sections/${id}`);
+  if (!res.ok) { detail.innerHTML = '<div style="padding:20px;color:red;">Error loading section.</div>'; return; }
+  const s = await res.json();
+
+  detail.innerHTML = `
+    <div class="clause-header">
+      <h2>${escHtml(s.clause_path)}</h2>
+      <span class="page-badge">Page ${s.page_no}</span>
+    </div>
+    <div class="offsets">char_start: ${s.char_start.toLocaleString()} &nbsp;|&nbsp; char_end: ${s.char_end.toLocaleString()} &nbsp;|&nbsp; length: ${(s.char_end - s.char_start).toLocaleString()}</div>
+
+    <h3>Section text</h3>
+    <div class="section-box">${escHtml(s.raw_text)}</div>
+
+    <h3>Surrounding context (300 chars each side) — highlighted section</h3>
+    <div class="context-box">
+      <span class="ctx-before">${escHtml(s.context_before)}</span><span class="ctx-highlight">${escHtml(s.raw_text)}</span><span class="ctx-after">${escHtml(s.context_after)}</span>
+    </div>
+  `;
+}
+
+// ---------------------------------------------------------------------------
+// Utilities
+// ---------------------------------------------------------------------------
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// ---------------------------------------------------------------------------
+// Event wiring
+// ---------------------------------------------------------------------------
+regSelect.addEventListener('change', () => {
+  if (regSelect.value) loadSections(regSelect.value);
+});
+
+loadRegulations();
+</script>
+</body>
+</html>
