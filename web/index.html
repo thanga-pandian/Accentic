@@ -180,6 +180,41 @@ p.vs{font-size:12px;color:var(--muted);margin-bottom:13px;max-width:820px;line-h
 }
 .flowwrap svg{width:100%;display:block;min-width:860px;max-height:300px}
 .flowscroll{overflow-x:auto}
+
+/* ---- narrative flow hero ---- */
+.story{
+  position:relative;border-radius:16px;overflow:hidden;margin-bottom:12px;
+  background:
+    radial-gradient(900px 220px at 50% 0%,rgba(57,135,229,.10),transparent 70%),
+    linear-gradient(135deg,rgba(144,133,233,.05),rgba(34,211,238,.03));
+  border:1px solid var(--line);backdrop-filter:blur(14px);
+}
+.story .inner{overflow-x:auto;scrollbar-width:none}
+.story .inner::-webkit-scrollbar{display:none}
+.story svg{width:100%;display:block;min-width:1120px;max-height:266px}
+@media(max-height:860px){.story svg{max-height:224px}}
+
+/* Negative delay starts each particle mid-flight, so the stream is already
+   populated on first paint instead of every dot bunching at the origin. */
+.pdot{
+  offset-rotate:0deg;animation:travel var(--dur,2.6s) linear infinite;
+  animation-delay:var(--dly,0s);animation-fill-mode:backwards;
+}
+@keyframes travel{
+  0%{offset-distance:0%;opacity:0}
+  12%{opacity:1}
+  88%{opacity:1}
+  100%{offset-distance:100%;opacity:0}
+}
+.stage-box{transition:all .45s}
+.stage.active .stage-box{filter:drop-shadow(0 0 12px rgba(57,135,229,.6))}
+.stage.active .ring-live{opacity:1;animation:haloPulse 1.3s ease-in-out infinite}
+.ring-live{opacity:0}
+.gate-ring{transform-origin:center;animation:gateSpin 14s linear infinite}
+@keyframes gateSpin{to{transform:rotate(360deg)}}
+.story .cap{font:650 12px system-ui,sans-serif;fill:#e8ebf2}
+.story .sub{font:500 10.5px system-ui,sans-serif;fill:#6b7488}
+.story .num{font:750 19px system-ui,sans-serif;letter-spacing:-.5px}
 /* Short laptop screens: trade chrome for content. */
 @media(max-height:860px){
   .kpi .value{font-size:18px}
@@ -660,14 +695,177 @@ function flowEdges(id, on){
   });
 }
 
+/* ==================== narrative flow hero ====================
+   Reads left to right: what goes in, what the system does to it, what comes
+   out. The verification gate sits at the centre because it is the step that
+   makes every downstream claim checkable. Counts are live. */
+const SY = 104;                      // vertical centre of the artefact row
+const SX = [84, 308, 532, 756, 980]; // stage centres
+
+function stream(x1, x2, seed){
+  const lanes = 7, perLane = 3, out = [], paths = [];
+  for(let i=0;i<lanes;i++){
+    const spread = (i - (lanes-1)/2) * 11.5;
+    const y1 = SY + spread*0.42, y2 = SY + spread;
+    const mx = (x1+x2)/2;
+    paths.push(`M${x1},${y1} C${mx-24},${y1} ${mx+24},${y2} ${x2},${y2}`);
+  }
+  // Rails first so every particle rides above them.
+  paths.forEach(d => out.push(
+    `<path d="${d}" fill="none" stroke="url(#sg)" stroke-width="1" opacity=".26"/>`));
+
+  paths.forEach((d,i) => {
+    for(let k=0;k<perLane;k++){
+      const n = i + k*lanes + seed*5;
+      const dur = (2.3 + (i%4)*0.22).toFixed(2);
+      const dly = -(((i*0.31)+(k*dur/perLane)+seed*0.13) % dur).toFixed(2);
+      const fill = ['#3987e5','#22d3ee','#199e70','#9085e9','#6aa9f0'][n%5];
+      const style = `offset-path:path('${d}');--dly:${dly}s;--dur:${dur}s`;
+      out.push(n%3===0
+        ? `<rect class="pdot" x="-3.2" y="-3.2" width="6.4" height="6.4" rx="1.6"
+             fill="${fill}" style="${style}"/>`
+        : `<circle class="pdot" r="${n%4===1?3:2.3}" fill="${fill}" style="${style}"/>`);
+    }
+  });
+  return out.join('');
+}
+
+function docStack(cx){
+  const page = (dx,dy,o) => `
+    <g transform="translate(${cx-34+dx},${SY-46+dy})" opacity="${o}">
+      <rect width="62" height="82" rx="6" fill="rgba(255,255,255,.07)"
+        stroke="rgba(255,255,255,.18)"/>
+      ${[0,1,2,3,4].map(i => `<rect x="9" y="${16+i*11}" width="${i===4?26:44}" height="3.4"
+        rx="1.7" fill="rgba(255,255,255,.22)"/>`).join('')}
+    </g>`;
+  return `
+    ${page(14,-8,.45)}${page(7,-4,.7)}${page(0,0,1)}
+    <rect x="${cx-25}" y="${SY-38}" width="30" height="9" rx="2.5" fill="#3987e5" opacity=".85"/>
+    <text x="${cx-21}" y="${SY-31}" font="700 6px system-ui" fill="#fff"
+      font-size="6" font-weight="700" font-family="system-ui">RBI</text>`;
+}
+
+function chipStack(cx){
+  const rows = [0,1,2,3];
+  return rows.map(i => `
+    <g transform="translate(${cx-46},${SY-44+i*23})">
+      <rect width="92" height="18" rx="5" fill="rgba(57,135,229,.12)"
+        stroke="rgba(57,135,229,.34)"/>
+      <circle cx="11" cy="9" r="3" fill="${['#d03b3b','#fab219','#0ca30c','#fab219'][i]}"/>
+      <rect x="20" y="6" width="${[52,44,58,38][i]}" height="3.4" rx="1.7"
+        fill="rgba(255,255,255,.28)"/>
+    </g>`).join('');
+}
+
+function gate(cx){
+  return `
+    <circle class="gate-ring" cx="${cx}" cy="${SY}" r="47" fill="none"
+      stroke="rgba(34,211,238,.35)" stroke-width="1.2" stroke-dasharray="5 9"/>
+    <circle cx="${cx}" cy="${SY}" r="38" fill="rgba(10,14,22,.9)"
+      stroke="rgba(34,211,238,.55)" stroke-width="1.5"/>
+    <circle cx="${cx}" cy="${SY}" r="38" fill="none" stroke="#22d3ee" stroke-width="2"
+      stroke-dasharray="239" stroke-dashoffset="0" opacity=".9"
+      transform="rotate(-90 ${cx} ${SY})" style="filter:drop-shadow(0 0 7px #22d3ee)"/>
+    <path d="M${cx-13},${SY-2} l8,9 l18,-19" fill="none" stroke="#5fe8c0" stroke-width="3.4"
+      stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 5px #5fe8c0)"/>
+    <rect x="${cx-52}" y="${SY+46}" width="104" height="17" rx="5"
+      fill="rgba(0,0,0,.45)" stroke="rgba(34,211,238,.3)"/>
+    <text x="${cx}" y="${SY+58}" text-anchor="middle" font-size="9"
+      font-family="ui-monospace,monospace" fill="#7fe3f5">full_text[s:e]</text>`;
+}
+
+function controlGrid(cx){
+  return [0,1,2,3,4,5].map(i => {
+    const x = cx - 48 + (i%3)*33, y = SY - 36 + Math.floor(i/3)*34;
+    const eff = [1,.6,1,.3,1,.6][i];
+    const col = eff>=.9?'#0ca30c':eff>=.5?'#fab219':'#d03b3b';
+    return `<g transform="translate(${x},${y})">
+      <rect width="27" height="26" rx="5" fill="rgba(255,255,255,.06)"
+        stroke="rgba(255,255,255,.16)"/>
+      <rect x="5" y="6" width="17" height="2.6" rx="1.3" fill="rgba(255,255,255,.26)"/>
+      <rect x="5" y="12" width="11" height="2.6" rx="1.3" fill="rgba(255,255,255,.18)"/>
+      <rect x="5" y="19" width="17" height="3" rx="1.5" fill="rgba(255,255,255,.1)"/>
+      <rect x="5" y="19" width="${17*eff}" height="3" rx="1.5" fill="${col}"/>
+    </g>`;
+  }).join('');
+}
+
+function gapCard(cx){
+  return `
+    <g transform="translate(${cx-56},${SY-48})">
+      <rect width="112" height="96" rx="9" fill="rgba(255,255,255,.055)"
+        stroke="rgba(255,255,255,.18)"/>
+      <rect width="3.5" height="96" rx="2" fill="#d03b3b"/>
+      <rect x="13" y="13" width="40" height="13" rx="6" fill="rgba(208,59,59,.2)"
+        stroke="rgba(208,59,59,.5)"/>
+      <text x="33" y="22.5" text-anchor="middle" font-size="7.5" font-weight="700"
+        font-family="system-ui" fill="#f49090">CRITICAL</text>
+      <text x="60" y="23" font-size="8" font-family="ui-monospace,monospace"
+        fill="#8cc0f5">53.1</text>
+      <rect x="13" y="34" width="86" height="3.2" rx="1.6" fill="rgba(255,255,255,.22)"/>
+      <rect x="13" y="42" width="66" height="3.2" rx="1.6" fill="rgba(255,255,255,.16)"/>
+      <rect x="13" y="55" width="86" height="27" rx="6" fill="rgba(12,163,12,.1)"
+        stroke="rgba(12,163,12,.3)"/>
+      <text x="20" y="66" font-size="7" font-weight="700" font-family="system-ui"
+        fill="#6ad06a">REMEDIATION</text>
+      <rect x="20" y="71" width="52" height="2.8" rx="1.4" fill="rgba(255,255,255,.2)"/>
+    </g>`;
+}
+
+function narrativeFlow(){
+  const s = STATS || {};
+  const n = k => (s[k] != null ? s[k] : '—');
+  const stages = [
+    ['Regulations',  `${n('regulation')} documents`,    '#8cc0f5', n('reg_section')+' clauses parsed', docStack],
+    ['Obligations',  `${n('obligation')} extracted`,    '#9085e9', 'actor · action · deadline',        chipStack],
+    ['Verified to source', `${s.verification_pct ?? '—'}% provable`, '#22d3ee', 're-sliced from the original', gate],
+    ['Bank controls',`${n('control')} mapped`,          '#6ad06a', 'graded by last test result',       controlGrid],
+    ['Gaps & fixes', `${n('gap')} prioritised`,         '#f49090', 'impact × likelihood',              gapCard],
+  ];
+
+  const art = stages.map(([t,,col,,draw],i) => `
+    <g class="stage" id="st-${i}">
+      <circle class="ring-live" cx="${SX[i]}" cy="${SY}" r="64" fill="none"
+        stroke="${col}" stroke-width="1" opacity="0"/>
+      <g class="stage-box">${draw(SX[i])}</g>
+    </g>`).join('');
+
+  const flows = SX.slice(0,-1).map((x,i) =>
+    `<g>${stream(x+64, SX[i+1]-64, i)}</g>`).join('');
+
+  const labels = stages.map(([title,metric,col,sub],i) => `
+    <text class="cap" x="${SX[i]}" y="200" text-anchor="middle">${title}</text>
+    <text class="num" x="${SX[i]}" y="223" text-anchor="middle" fill="${col}">${metric}</text>
+    <text class="sub" x="${SX[i]}" y="240" text-anchor="middle">${sub}</text>`).join('');
+
+  return `<div class="story"><div class="inner">
+    <svg viewBox="0 0 1064 256" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <linearGradient id="sg" x1="0" x2="1">
+          <stop offset="0" stop-color="#3987e5" stop-opacity=".1"/>
+          <stop offset=".5" stop-color="#22d3ee" stop-opacity=".55"/>
+          <stop offset="1" stop-color="#9085e9" stop-opacity=".1"/>
+        </linearGradient>
+      </defs>
+      ${flows}${art}${labels}
+    </svg></div></div>`;
+}
+
+function setStage(i, on){
+  document.getElementById('st-'+i)?.classList.toggle('active', on);
+}
+const AGENT_STAGE = {
+  IngestionAgent:0, ObligationAgent:1, ControlAgent:3,
+  MappingAgent:3, GapAgent:4, ContradictionAgent:4, ChangeAgent:0, SimulationAgent:4,
+};
+
 function pipelineShell(){
   $('#v-pipeline').innerHTML = `
-    <h2 class="vh">Autonomous compliance pipeline</h2>
-    <p class="vs">Eight agents run the chain the regulator cares about —
-      regulation → obligation → control → evidence → gap → remediation → monitoring.
-      Every agent logs its reasoning, the tools it called, and whether it had to recover
-      from an unverifiable result. Press <b style="color:var(--ink)">Run Analysis</b> to watch it execute.</p>
-    ${flowGraph()}
+    ${narrativeFlow()}
+    <p class="vs" style="margin:-2px 0 14px">Regulations in, prioritised remediation out. The
+      gate in the middle is what makes the rest trustworthy: every extracted claim is re-sliced
+      from the original document before it is allowed downstream.
+      Press <b style="color:var(--ink)">Run Analysis</b> to watch the eight agents execute.</p>
     <div class="alog" id="alog">${NODES.map(([id,label]) => `
       <div class="agent" id="ag-${id}">
         <div class="a-ico"><span>${ICONS[id]}</span></div>
@@ -699,6 +897,7 @@ function runPipeline(){
     if(e.event==='start' && card){
       card.className = 'agent running';
       setNode(e.agent,'run','running'); flowEdges(e.agent,true);
+      if(AGENT_STAGE[e.agent]!=null) setStage(AGENT_STAGE[e.agent], true);
       $('#runTxt').textContent = e.agent;
       card.scrollIntoView({behavior:'smooth',block:'nearest'});
     }
@@ -709,6 +908,8 @@ function runPipeline(){
       if(e.event==='done'){
         card.className='agent done';
         setNode(e.agent,'done','done'); flowEdges(e.agent,false);
+        if(AGENT_STAGE[e.agent]!=null) setStage(AGENT_STAGE[e.agent], false);
+        if(e.agent==='ObligationAgent') setStage(2, true);
       }
       const bits = Object.entries(e).filter(([k]) =>
         !['event','agent','stage','duration_ms','message'].includes(k));
@@ -734,8 +935,10 @@ async function finish(stats, err){
   $('#runBadge').classList.remove('live');
   $('#runTxt').textContent = err ? 'error' : 'complete';
   NODES.forEach(([id]) => flowEdges(id,false));
+  [0,1,2,3,4].forEach(i => setStage(i,false));
   if(err){ alert('Pipeline error: '+err); return; }
   await loadAll();
+  pipelineShell();   // redraw the story with the counts this run produced
   (DATA.runs||[]).forEach(r => {
     const rsn = $('#rsn-'+r.agent_name), tls = $('#tls-'+r.agent_name);
     if(rsn && r.reasoning){ rsn.style.display=''; rsn.textContent = r.reasoning; }
@@ -1177,6 +1380,7 @@ const RENDER = {
     $('#modeTxt').textContent = claude ? 'Claude Opus 5.5' : 'Rule engine (no API key)';
     if(s.obligation>0){
       await loadAll();
+      pipelineShell();   // redraw the story now that STATS has real counts
       const want = new URLSearchParams(location.search).get('tab');
       if(want && TABS.some(([t]) => t===want)) show(want, false);
       DATA.runs?.forEach(r => setNode(r.agent_name,'done','done'));
