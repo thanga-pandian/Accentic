@@ -1,5 +1,9 @@
--- Enable pgvector (installed in image; not used yet)
-CREATE EXTENSION IF NOT EXISTS vector;
+-- Enable pgvector if available (used in later sprints; safe to skip if not installed)
+DO $$ BEGIN
+  CREATE EXTENSION IF NOT EXISTS vector;
+EXCEPTION WHEN OTHERS THEN
+  RAISE NOTICE 'pgvector not available, skipping (not needed for Sprint 1)';
+END $$;
 
 -- Regulations: one row per ingested document
 CREATE TABLE IF NOT EXISTS regulation (
