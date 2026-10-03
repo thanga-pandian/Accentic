@@ -187,7 +187,7 @@ def _insert_needs_review(conn, stage: str, payload: dict, reason: str) -> None:
         )
 
 
-def run(source_path: Path, dry_run: bool = False) -> None:
+def run(source_path: Path, dry_run: bool = False, conn=None) -> None:
     if source_path.suffix.lower() == ".txt":
         full_text, page_offsets = _extract_text_from_txt(source_path)
     else:
@@ -209,10 +209,10 @@ def run(source_path: Path, dry_run: bool = False) -> None:
             )
         return
 
-    conn = get_connection()
+    owns_conn = conn is None
+    conn = conn or get_connection()
     try:
         regulation_id = _insert_regulation(conn, source_path, full_text)
-        print(f"Inserted regulation {regulation_id}")
 
         ok = fail = 0
         for section in sections:
@@ -241,9 +241,10 @@ def run(source_path: Path, dry_run: bool = False) -> None:
                 fail += 1
 
         conn.commit()
-        print(f"Inserted {ok} sections, {fail} sent to needs_review.")
+        print(f"{source_path.name}: {ok} sections, {fail} to needs_review.")
     finally:
-        conn.close()
+        if owns_conn:
+            conn.close()
 
 
 def main() -> None:

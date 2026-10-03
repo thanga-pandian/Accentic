@@ -1,245 +1,782 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Accentic — Clause Viewer</title>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Accentic — Agentic Regulatory Compliance</title>
+<style>
+:root{
+  --plane:#0d0d0d; --surface:#1a1a19; --surface-2:#211f1e; --surface-3:#2a2927;
+  --ink:#ffffff; --ink-2:#c3c2b7; --muted:#898781;
+  --grid:#2c2c2a; --border:rgba(255,255,255,.10); --border-2:rgba(255,255,255,.18);
+  --good:#0ca30c; --warning:#fab219; --serious:#ec835a; --critical:#d03b3b;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500;
+  --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767;
+  --r:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--plane);color:var(--ink);
+  font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;
+  display:flex;flex-direction:column;overflow:hidden;
+}
+button{font:inherit;color:inherit;cursor:pointer;border:none;background:none}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:var(--surface-3);border-radius:5px}
+::-webkit-scrollbar-track{background:transparent}
 
-    body {
-      font-family: system-ui, -apple-system, sans-serif;
-      font-size: 14px;
-      background: #f5f5f5;
-      color: #222;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
+/* ---------- header ---------- */
+header{
+  display:flex;align-items:center;gap:18px;padding:12px 20px;
+  background:linear-gradient(180deg,#161615,#121211);
+  border-bottom:1px solid var(--border);flex-shrink:0;
+}
+.brand{display:flex;align-items:center;gap:11px}
+.logo{
+  width:32px;height:32px;border-radius:8px;flex-shrink:0;
+  background:linear-gradient(135deg,var(--s1),var(--s7));
+  display:grid;place-items:center;font-weight:700;font-size:15px;
+  box-shadow:0 0 18px rgba(57,135,229,.4);
+}
+.brand h1{font-size:16px;font-weight:650;letter-spacing:-.2px}
+.brand .sub{font-size:11px;color:var(--muted);letter-spacing:.3px}
+.spacer{flex:1}
 
-    header {
-      background: #1a1a2e;
-      color: #eee;
-      padding: 10px 16px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    header h1 { font-size: 16px; font-weight: 600; }
-    header select { font-size: 13px; padding: 3px 6px; max-width: 360px; }
+.badge{
+  display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;
+  font-size:11px;font-weight:600;border:1px solid var(--border);background:var(--surface-2);
+  color:var(--ink-2);white-space:nowrap;
+}
+.badge .dot{width:6px;height:6px;border-radius:50%;background:var(--muted)}
+.badge.live .dot{background:var(--good);box-shadow:0 0 7px var(--good);animation:pulse 1.6s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
 
-    .layout {
-      display: flex;
-      flex: 1;
-      overflow: hidden;
-    }
+.run-btn{
+  padding:9px 20px;border-radius:8px;font-weight:650;font-size:13px;
+  background:linear-gradient(135deg,var(--s1),#2a6fc4);color:#fff;
+  box-shadow:0 2px 14px rgba(57,135,229,.35);transition:.18s;
+}
+.run-btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 4px 20px rgba(57,135,229,.5)}
+.run-btn:disabled{opacity:.5;cursor:not-allowed}
 
-    /* Left panel: clause list */
-    #clause-list {
-      width: 280px;
-      min-width: 200px;
-      overflow-y: auto;
-      background: #fff;
-      border-right: 1px solid #ddd;
-    }
-    #clause-list .item {
-      padding: 8px 12px;
-      border-bottom: 1px solid #eee;
-      cursor: pointer;
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-    #clause-list .item:hover { background: #f0f4ff; }
-    #clause-list .item.active { background: #dce8ff; border-left: 3px solid #2563eb; }
-    #clause-list .item .path { font-weight: 600; font-size: 13px; font-family: monospace; }
-    #clause-list .item .meta { font-size: 11px; color: #666; }
-    #clause-list .item .preview { font-size: 11px; color: #444; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* ---------- KPI strip ---------- */
+.kpis{
+  display:grid;grid-template-columns:repeat(6,1fr);gap:1px;
+  background:var(--border);border-bottom:1px solid var(--border);flex-shrink:0;
+}
+.kpi{background:var(--surface);padding:11px 16px;display:flex;flex-direction:column;gap:2px}
+.kpi .label{font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);font-weight:600}
+.kpi .value{font-size:24px;font-weight:680;letter-spacing:-.5px;line-height:1.15}
+.kpi .note{font-size:10.5px;color:var(--muted)}
+.kpi .value.ok{color:var(--good)} .kpi .value.warn{color:var(--warning)}
+.kpi .value.bad{color:var(--critical)} .kpi .value.info{color:var(--s1)}
 
-    /* Right panel: detail */
-    #detail {
-      flex: 1;
-      overflow-y: auto;
-      padding: 20px;
-      background: #fafafa;
-    }
-    #detail .placeholder { color: #888; margin-top: 40px; text-align: center; }
+/* ---------- tabs ---------- */
+nav{
+  display:flex;gap:2px;padding:0 14px;background:var(--surface);
+  border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto;
+}
+nav button{
+  padding:10px 14px;font-size:12.5px;font-weight:550;color:var(--muted);
+  border-bottom:2px solid transparent;white-space:nowrap;transition:.15s;
+}
+nav button:hover{color:var(--ink-2)}
+nav button.on{color:var(--ink);border-bottom-color:var(--s1)}
+nav button .n{
+  display:inline-block;margin-left:6px;padding:1px 6px;border-radius:999px;
+  background:var(--surface-3);font-size:10px;font-weight:600;color:var(--ink-2);
+}
 
-    #detail .clause-header {
-      display: flex;
-      align-items: baseline;
-      gap: 16px;
-      margin-bottom: 12px;
-    }
-    #detail .clause-header h2 { font-size: 20px; }
-    #detail .clause-header .page-badge {
-      background: #1a1a2e;
-      color: #eee;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 12px;
-    }
+main{flex:1;overflow:hidden;position:relative}
+.view{position:absolute;inset:0;overflow-y:auto;padding:18px 20px 40px;display:none}
+.view.on{display:block}
 
-    .offsets {
-      font-family: monospace;
-      font-size: 12px;
-      background: #f0f0f0;
-      padding: 6px 10px;
-      border-radius: 4px;
-      margin-bottom: 16px;
-      color: #555;
-    }
+h2.vh{font-size:14px;font-weight:650;margin-bottom:3px}
+p.vs{font-size:12px;color:var(--muted);margin-bottom:16px;max-width:760px}
 
-    .section-box {
-      background: #fff;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      padding: 14px 16px;
-      white-space: pre-wrap;
-      font-size: 13px;
-      line-height: 1.6;
-      margin-bottom: 20px;
-    }
+/* ---------- cards ---------- */
+.card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
+  padding:14px 16px;margin-bottom:10px;
+}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media(max-width:1100px){.grid2,.grid3{grid-template-columns:1fr}}
 
-    h3 { font-size: 13px; font-weight: 600; margin-bottom: 8px; color: #444; }
+/* ---------- pipeline ---------- */
+.pipe{display:flex;flex-direction:column;gap:8px}
+.agent{
+  display:grid;grid-template-columns:30px 1fr auto;gap:13px;align-items:start;
+  background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--grid);
+  border-radius:var(--r);padding:12px 15px;transition:.25s;
+}
+.agent.running{border-left-color:var(--s1);background:linear-gradient(90deg,rgba(57,135,229,.09),var(--surface))}
+.agent.done{border-left-color:var(--good)}
+.agent.failed{border-left-color:var(--critical)}
+.a-ico{
+  width:30px;height:30px;border-radius:8px;display:grid;place-items:center;
+  background:var(--surface-3);font-size:13px;color:var(--muted);transition:.25s;
+}
+.agent.running .a-ico{background:rgba(57,135,229,.2);color:var(--s1);animation:spin 1.1s linear infinite}
+.agent.done .a-ico{background:rgba(12,163,12,.17);color:var(--good)}
+.agent.failed .a-ico{background:rgba(208,59,59,.17);color:var(--critical)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.a-name{font-weight:620;font-size:13px}
+.a-goal{font-size:11.5px;color:var(--muted);margin-top:1px}
+.a-out{font-size:12px;color:var(--ink-2);margin-top:7px}
+.a-reason{
+  font-size:11.5px;color:var(--muted);margin-top:6px;padding-left:9px;
+  border-left:2px solid var(--grid);font-style:italic;line-height:1.5;
+}
+.a-tools{display:flex;flex-wrap:wrap;gap:4px;margin-top:7px}
+.tool{
+  font:10.5px ui-monospace,Menlo,Consolas,monospace;padding:2px 7px;border-radius:5px;
+  background:var(--surface-3);color:var(--ink-2);border:1px solid var(--border);
+}
+.a-time{font:11px ui-monospace,monospace;color:var(--muted);white-space:nowrap}
 
-    .context-box {
-      background: #fff;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      padding: 14px 16px;
-      white-space: pre-wrap;
-      font-size: 12px;
-      line-height: 1.6;
-      font-family: monospace;
-    }
-    .context-box .ctx-before { color: #888; }
-    .context-box .ctx-highlight { background: #fff3b0; border-radius: 2px; color: #111; font-weight: 500; }
-    .context-box .ctx-after { color: #888; }
+/* ---------- chips ---------- */
+.chip{
+  display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:999px;
+  font-size:10.5px;font-weight:620;border:1px solid transparent;white-space:nowrap;
+}
+.chip.critical{background:rgba(208,59,59,.16);color:#f08a8a;border-color:rgba(208,59,59,.4)}
+.chip.high{background:rgba(236,131,90,.16);color:#f3a382;border-color:rgba(236,131,90,.4)}
+.chip.medium{background:rgba(250,178,25,.14);color:#f6c45c;border-color:rgba(250,178,25,.35)}
+.chip.low{background:rgba(12,163,12,.14);color:#5fc95f;border-color:rgba(12,163,12,.35)}
+.chip.neutral{background:var(--surface-3);color:var(--ink-2);border-color:var(--border)}
+.chip.blue{background:rgba(57,135,229,.15);color:#7fb4f0;border-color:rgba(57,135,229,.38)}
 
-    #loading { padding: 20px; color: #666; }
-  </style>
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px}
+
+/* ---------- list + detail split ---------- */
+.split{display:grid;grid-template-columns:minmax(300px,420px) 1fr;gap:12px;height:calc(100vh - 260px)}
+@media(max-width:1000px){.split{grid-template-columns:1fr;height:auto}}
+.list{overflow-y:auto;padding-right:3px}
+.detail{overflow-y:auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px}
+.row{
+  background:var(--surface);border:1px solid var(--border);border-radius:9px;
+  padding:10px 12px;margin-bottom:7px;cursor:pointer;transition:.15s;
+}
+.row:hover{border-color:var(--border-2);background:var(--surface-2)}
+.row.on{border-color:var(--s1);background:rgba(57,135,229,.08)}
+.row-top{display:flex;align-items:center;gap:7px;margin-bottom:4px;flex-wrap:wrap}
+.row-txt{font-size:12px;color:var(--ink-2);line-height:1.45;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+/* ---------- proof ---------- */
+.proof-hd{display:flex;align-items:center;gap:9px;margin-bottom:11px;flex-wrap:wrap}
+.verdict{
+  display:inline-flex;align-items:center;gap:7px;padding:6px 13px;border-radius:8px;
+  font-weight:680;font-size:12.5px;
+}
+.verdict.pass{background:rgba(12,163,12,.15);color:#5fc95f;border:1px solid rgba(12,163,12,.45)}
+.verdict.fail{background:rgba(208,59,59,.15);color:#f08a8a;border:1px solid rgba(208,59,59,.45)}
+.offsets{
+  display:flex;gap:16px;flex-wrap:wrap;padding:9px 12px;background:var(--plane);
+  border:1px solid var(--border);border-radius:8px;margin-bottom:12px;
+}
+.offsets div{display:flex;flex-direction:column;gap:1px}
+.offsets .k{font-size:9.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:600}
+.offsets .v{font-family:ui-monospace,monospace;font-size:13px;font-weight:600}
+.secn{font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);
+  font-weight:650;margin:14px 0 6px}
+.textbox{
+  background:var(--plane);border:1px solid var(--border);border-radius:8px;padding:12px 13px;
+  font-size:12.5px;line-height:1.65;white-space:pre-wrap;word-break:break-word;
+}
+.ctxbox{
+  background:var(--plane);border:1px solid var(--border);border-radius:8px;padding:12px 13px;
+  font-family:ui-monospace,monospace;font-size:11.5px;line-height:1.7;
+  white-space:pre-wrap;word-break:break-word;max-height:300px;overflow-y:auto;
+}
+.ctxbox .dim{color:#6e6c67}
+.hl{background:rgba(250,178,25,.22);color:#ffe9b0;border-radius:3px;
+  box-shadow:0 0 0 1px rgba(250,178,25,.35);padding:1px 0}
+
+/* ---------- trace chain ---------- */
+.chain{display:flex;flex-direction:column;gap:0}
+.node{
+  display:grid;grid-template-columns:34px 1fr;gap:13px;position:relative;padding-bottom:14px;
+}
+.node:not(:last-child)::before{
+  content:"";position:absolute;left:16.5px;top:32px;bottom:0;width:2px;background:var(--grid);
+}
+.n-ico{
+  width:34px;height:34px;border-radius:9px;display:grid;place-items:center;
+  font-size:14px;border:1px solid var(--border);background:var(--surface-2);z-index:1;
+}
+.n-body{background:var(--surface-2);border:1px solid var(--border);border-radius:9px;padding:11px 13px}
+.n-kind{font-size:9.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);font-weight:650}
+.n-title{font-weight:620;font-size:13px;margin:2px 0 4px}
+.n-txt{font-size:12px;color:var(--ink-2);line-height:1.5}
+
+/* ---------- bars ---------- */
+.bar{height:5px;background:var(--surface-3);border-radius:3px;overflow:hidden;margin-top:6px}
+.bar>i{display:block;height:100%;border-radius:3px;transition:width .5s}
+
+/* ---------- simulate ---------- */
+.simrow{display:flex;gap:9px;margin-bottom:14px;flex-wrap:wrap}
+.simrow input{
+  flex:1;min-width:280px;padding:11px 14px;border-radius:9px;background:var(--surface);
+  border:1px solid var(--border-2);color:var(--ink);font:inherit;
+}
+.simrow input:focus{outline:none;border-color:var(--s1);box-shadow:0 0 0 3px rgba(57,135,229,.15)}
+.presets{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.preset{
+  padding:6px 12px;border-radius:999px;font-size:11.5px;background:var(--surface-2);
+  border:1px solid var(--border);color:var(--ink-2);transition:.15s;
+}
+.preset:hover{border-color:var(--s1);color:var(--ink)}
+
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{
+  text-align:left;padding:8px 10px;font-size:10px;text-transform:uppercase;
+  letter-spacing:.6px;color:var(--muted);font-weight:650;border-bottom:1px solid var(--border);
+}
+td{padding:9px 10px;border-bottom:1px solid var(--grid);vertical-align:top;color:var(--ink-2)}
+tr:hover td{background:var(--surface-2)}
+
+.empty{text-align:center;padding:60px 20px;color:var(--muted);font-size:13px}
+.empty .big{font-size:36px;margin-bottom:10px;opacity:.4}
+.hint{font-size:11.5px;color:var(--muted);margin-top:8px}
+.flexbet{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+</style>
 </head>
 <body>
 
 <header>
-  <h1>Accentic Clause Viewer</h1>
-  <select id="reg-select"><option value="">— loading regulations —</option></select>
+  <div class="brand">
+    <div class="logo">A</div>
+    <div>
+      <h1>Accentic</h1>
+      <div class="sub">Agentic Regulatory Compliance · RBI / PMLA</div>
+    </div>
+  </div>
+  <div class="spacer"></div>
+  <span class="badge" id="modeBadge"><span class="dot"></span><span id="modeTxt">checking…</span></span>
+  <span class="badge" id="runBadge" style="display:none"><span class="dot"></span><span id="runTxt"></span></span>
+  <button class="run-btn" id="runBtn">▶  Run Analysis</button>
 </header>
 
-<div class="layout">
-  <div id="clause-list"><div id="loading">Loading…</div></div>
-  <div id="detail"><p class="placeholder">Select a clause on the left to inspect it.</p></div>
-</div>
+<div class="kpis" id="kpis"></div>
+
+<nav id="tabs"></nav>
+
+<main>
+  <div class="view on" id="v-pipeline"></div>
+  <div class="view" id="v-obligations"></div>
+  <div class="view" id="v-gaps"></div>
+  <div class="view" id="v-controls"></div>
+  <div class="view" id="v-conflicts"></div>
+  <div class="view" id="v-changes"></div>
+  <div class="view" id="v-simulate"></div>
+</main>
 
 <script>
-const regSelect = document.getElementById('reg-select');
-const clauseList = document.getElementById('clause-list');
-const detail = document.getElementById('detail');
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const api = async (p, o) => (await fetch(p, o)).json();
 
-let currentSectionId = null;
+const TABS = [
+  ['pipeline',     'Agent Pipeline', null],
+  ['obligations',  'Obligations',    'obligation'],
+  ['gaps',         'Gaps & Fixes',   'gap'],
+  ['controls',     'Bank Controls',  'control'],
+  ['conflicts',    'Conflicts',      'contradiction'],
+  ['changes',      'Change Impact',  'reg_change'],
+  ['simulate',     'What-If',        null],
+];
 
-// ---------------------------------------------------------------------------
-// Load regulations into the dropdown
-// ---------------------------------------------------------------------------
-async function loadRegulations() {
-  const res = await fetch('/api/regulations');
-  const regs = await res.json();
-  regSelect.innerHTML = '';
-  if (!regs.length) {
-    regSelect.innerHTML = '<option value="">No regulations ingested yet</option>';
-    clauseList.innerHTML = '<div style="padding:12px;color:#888;">No data yet.</div>';
-    return;
-  }
-  regs.forEach(r => {
-    const opt = document.createElement('option');
-    opt.value = r.id;
-    opt.textContent = `${r.regulator} — ${r.title}`;
-    regSelect.appendChild(opt);
+const AGENTS = [
+  ['IngestionAgent',     '◈', 'Parse regulations, compute verifiable character offsets'],
+  ['ObligationAgent',    '◆', 'Extract obligations and anchor every one to its source'],
+  ['ControlAgent',       '▣', 'Parse the bank control framework and grade effectiveness'],
+  ['MappingAgent',       '⇄', 'Map obligations to controls, discounted by test results'],
+  ['GapAgent',           '△', 'Score gaps by impact × likelihood, recommend remediation'],
+  ['ContradictionAgent', '⚡', 'Detect conflicting requirements across regulations'],
+  ['ChangeAgent',        '⟳', 'Diff against the prior version and size the impact'],
+];
+
+let STATS = {}, DATA = {}, running = false;
+
+/* ==================== KPIs ==================== */
+function renderKpis(s) {
+  const cov = s.coverage_pct ?? 0;
+  const sev = s.severity || {};
+  const crit = (sev.critical || 0) + (sev.high || 0);
+  const tiles = [
+    ['Obligations', s.obligation ?? '—', 'info', `${s.reg_section ?? 0} clauses parsed`],
+    ['Verified to source', (s.verification_pct ?? 0) + '%',
+      (s.verification_pct === 100 ? 'ok' : 'warn'), 'char-offset re-sliced'],
+    ['Control coverage', cov + '%', cov >= 50 ? 'ok' : cov >= 25 ? 'warn' : 'bad',
+      `${s.control ?? 0} controls mapped`],
+    ['Open gaps', s.gap ?? '—', crit > 0 ? 'bad' : 'ok', `${crit} critical or high`],
+    ['Conflicts', s.contradiction ?? '—', (s.contradiction > 0 ? 'warn' : 'ok'),
+      'across regulations'],
+    ['Needs review', s.needs_review ?? '—', (s.needs_review > 0 ? 'warn' : 'ok'),
+      'routed to a human'],
+  ];
+  $('#kpis').innerHTML = tiles.map(([l, v, c, n]) => `
+    <div class="kpi"><div class="label">${l}</div>
+    <div class="value ${c}">${v}</div><div class="note">${n}</div></div>`).join('');
+}
+
+/* ==================== tabs ==================== */
+function renderTabs() {
+  $('#tabs').innerHTML = TABS.map(([id, label, key], i) => {
+    const n = key && STATS[key] ? `<span class="n">${STATS[key]}</span>` : '';
+    return `<button data-tab="${id}" class="${i === 0 ? 'on' : ''}">${label}${n}</button>`;
+  }).join('');
+  $('#tabs').querySelectorAll('button').forEach(b => b.onclick = () => show(b.dataset.tab));
+}
+function show(id) {
+  $('#tabs').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.tab === id));
+  document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.id === 'v-' + id));
+  if (RENDER[id]) RENDER[id]();
+}
+
+/* ==================== pipeline ==================== */
+function pipelineShell() {
+  $('#v-pipeline').innerHTML = `
+    <h2 class="vh">Autonomous compliance pipeline</h2>
+    <p class="vs">Seven agents run the chain the regulator cares about:
+      regulation → obligation → control → evidence → gap → remediation → monitoring.
+      Every agent logs its reasoning, the tools it called, and whether it had to
+      recover from a bad result. Press <b>Run Analysis</b> to watch it execute live.</p>
+    <div class="pipe" id="pipe">${AGENTS.map(([n, i, g]) => `
+      <div class="agent" id="ag-${n}">
+        <div class="a-ico">${i}</div>
+        <div><div class="a-name">${n}</div><div class="a-goal">${g}</div>
+          <div class="a-out" id="out-${n}"></div>
+          <div class="a-reason" id="rsn-${n}" style="display:none"></div>
+          <div class="a-tools" id="tls-${n}"></div></div>
+        <div class="a-time" id="tm-${n}"></div>
+      </div>`).join('')}</div>`;
+}
+
+function runPipeline() {
+  if (running) return;
+  running = true;
+  $('#runBtn').disabled = true;
+  $('#runBtn').textContent = '● Running…';
+  show('pipeline');
+  pipelineShell();
+  $('#runBadge').style.display = '';
+  $('#runBadge').classList.add('live');
+
+  const es = new EventSource('/api/run');
+  es.onmessage = ev => {
+    const e = JSON.parse(ev.data);
+    const card = e.agent ? $('#ag-' + e.agent) : null;
+
+    if (e.event === 'start' && card) {
+      card.className = 'agent running';
+      $('#runTxt').textContent = e.agent;
+    }
+    if (e.event === 'progress' && card) $('#out-' + e.agent).textContent = e.message || '';
+    if ((e.event === 'done' || e.event === 'summary') && card) {
+      if (e.event === 'done') card.className = 'agent done';
+      const bits = Object.entries(e).filter(([k]) =>
+        !['event','agent','stage','duration_ms','message'].includes(k));
+      if (bits.length) {
+        $('#out-' + e.agent).innerHTML = bits.map(([k, v]) =>
+          `<span class="chip ${k === 'rejected' && v > 0 ? 'high'
+            : k === 'recovered' && v > 0 ? 'medium' : 'neutral'}">${k.replace(/_/g,' ')}: <b>${v}</b></span>`
+        ).join(' ');
+      }
+      if (e.duration_ms != null) $('#tm-' + e.agent).textContent = e.duration_ms + ' ms';
+    }
+    if (e.event === 'failed' && card) {
+      card.className = 'agent failed';
+      $('#out-' + e.agent).textContent = e.error || 'failed';
+    }
+    if (e.event === 'complete') {
+      es.close(); finish(e);
+    }
+    if (e.event === 'error') { es.close(); finish(null, e.error); }
+  };
+  es.onerror = () => { es.close(); finish(null, 'stream interrupted'); };
+}
+
+async function finish(stats, err) {
+  running = false;
+  $('#runBtn').disabled = false;
+  $('#runBtn').textContent = '▶  Re-run Analysis';
+  $('#runBadge').classList.remove('live');
+  $('#runTxt').textContent = err ? 'error' : 'complete';
+  if (err) { alert('Pipeline error: ' + err); return; }
+  await loadAll();
+  // Attach each agent's recorded reasoning and tool calls.
+  (DATA.runs || []).forEach(r => {
+    const rsn = $('#rsn-' + r.agent_name), tls = $('#tls-' + r.agent_name);
+    if (rsn && r.reasoning) { rsn.style.display = ''; rsn.textContent = r.reasoning; }
+    if (tls) {
+      let tools = [];
+      try { tools = JSON.parse(r.tool_calls || '[]'); } catch {}
+      tls.innerHTML = tools.map(t => `<span class="tool">${esc(t)}()</span>`).join('')
+        + (r.model ? `<span class="tool" style="border-color:rgba(57,135,229,.4);color:#7fb4f0">${esc(r.model)}</span>` : '');
+    }
   });
-  loadSections(regs[0].id);
 }
 
-// ---------------------------------------------------------------------------
-// Load sections for a regulation
-// ---------------------------------------------------------------------------
-async function loadSections(regulationId) {
-  clauseList.innerHTML = '<div style="padding:12px;color:#888;">Loading…</div>';
-  const res = await fetch(`/api/sections?regulation_id=${regulationId}`);
-  const sections = await res.json();
+/* ==================== data ==================== */
+async function loadAll() {
+  const [stats, obligations, gaps, controls, conflicts, changes, runs] = await Promise.all([
+    api('/api/status'), api('/api/obligations'), api('/api/gaps'), api('/api/controls'),
+    api('/api/contradictions'), api('/api/changes'), api('/api/agent-runs'),
+  ]);
+  STATS = stats; DATA = { obligations, gaps, controls, conflicts, changes, runs };
+  renderKpis(stats); renderTabs();
+  $('#tabs').querySelector(`[data-tab="${currentTab()}"]`)?.classList.add('on');
+}
+function currentTab() {
+  return document.querySelector('.view.on')?.id.replace('v-', '') || 'pipeline';
+}
 
-  if (!sections.length) {
-    clauseList.innerHTML = '<div style="padding:12px;color:#888;">No sections found.</div>';
-    return;
-  }
+/* ==================== obligations ==================== */
+function renderObligations() {
+  const list = DATA.obligations || [];
+  const el = $('#v-obligations');
+  if (!list.length) return el.innerHTML = emptyState();
 
-  clauseList.innerHTML = '';
-  sections.forEach(s => {
-    const div = document.createElement('div');
-    div.className = 'item';
-    div.dataset.id = s.id;
-    div.innerHTML = `
-      <span class="path">${escHtml(s.clause_path)}</span>
-      <span class="meta">Page ${s.page_no} &nbsp;·&nbsp; ${s.char_start.toLocaleString()}–${s.char_end.toLocaleString()}</span>
-      <span class="preview">${escHtml(s.preview || '')}</span>
-    `;
-    div.addEventListener('click', () => selectSection(s.id, div));
-    clauseList.appendChild(div);
+  el.innerHTML = `
+    <h2 class="vh">Extracted obligations <span class="chip blue">${list.length}</span></h2>
+    <p class="vs">Each obligation was located in the source by Python, never by the model.
+      Select one to re-slice the original document and prove the stored text is authentic.</p>
+    <div class="split">
+      <div class="list" id="obList">${list.map((o, i) => `
+        <div class="row" data-i="${i}">
+          <div class="row-top">
+            <span class="mono" style="font-weight:650">${esc(o.clause_path)}</span>
+            <span class="chip ${o.risk_tier === 'high' ? 'critical' : o.risk_tier === 'medium' ? 'medium' : 'low'}">
+              ${o.risk_tier === 'high' ? '▲' : o.risk_tier === 'medium' ? '■' : '▽'} ${esc(o.risk_tier)}</span>
+            <span class="chip neutral">${esc(o.category || '—')}</span>
+            ${o.coverage === 'none' ? '<span class="chip critical">✕ uncovered</span>'
+              : o.coverage === 'partial' ? '<span class="chip medium">◐ partial</span>'
+              : '<span class="chip low">✓ covered</span>'}
+          </div>
+          <div class="row-txt">${esc((o.obligation_text || '').trim())}</div>
+        </div>`).join('')}</div>
+      <div class="detail" id="obDetail">
+        <div class="empty"><div class="big">◆</div>Select an obligation to see its proof of origin.</div>
+      </div>
+    </div>`;
+
+  el.querySelectorAll('.row').forEach(r => r.onclick = async () => {
+    el.querySelectorAll('.row').forEach(x => x.classList.remove('on'));
+    r.classList.add('on');
+    await showProof(list[+r.dataset.i]);
   });
 }
 
-// ---------------------------------------------------------------------------
-// Select and display a section
-// ---------------------------------------------------------------------------
-async function selectSection(id, el) {
-  if (currentSectionId === id) return;
-  currentSectionId = id;
+async function showProof(o) {
+  const d = $('#obDetail');
+  d.innerHTML = '<div class="empty">Verifying against source…</div>';
+  const [p, t] = await Promise.all([
+    api(`/api/obligations/${o.id}/proof`), api(`/api/trace/${o.id}`),
+  ]);
 
-  document.querySelectorAll('#clause-list .item').forEach(i => i.classList.remove('active'));
-  el.classList.add('active');
-
-  detail.innerHTML = '<div style="padding:20px;color:#666;">Loading…</div>';
-
-  const res = await fetch(`/api/sections/${id}`);
-  if (!res.ok) { detail.innerHTML = '<div style="padding:20px;color:red;">Error loading section.</div>'; return; }
-  const s = await res.json();
-
-  detail.innerHTML = `
-    <div class="clause-header">
-      <h2>${escHtml(s.clause_path)}</h2>
-      <span class="page-badge">Page ${s.page_no}</span>
+  d.innerHTML = `
+    <div class="proof-hd">
+      <span class="verdict ${p.verified ? 'pass' : 'fail'}">
+        ${p.verified ? '✓ VERIFIED' : '✕ FAILED'}</span>
+      <span class="mono" style="font-weight:650;font-size:14px">${esc(p.clause_path)}</span>
+      <span class="chip neutral">${esc(p.regulator)} · page ${p.page_no ?? '—'}</span>
+      <span class="chip blue">${esc(p.extracted_by)}</span>
     </div>
-    <div class="offsets">char_start: ${s.char_start.toLocaleString()} &nbsp;|&nbsp; char_end: ${s.char_end.toLocaleString()} &nbsp;|&nbsp; length: ${(s.char_end - s.char_start).toLocaleString()}</div>
-
-    <h3>Section text</h3>
-    <div class="section-box">${escHtml(s.raw_text)}</div>
-
-    <h3>Surrounding context (300 chars each side) — highlighted section</h3>
-    <div class="context-box">
-      <span class="ctx-before">${escHtml(s.context_before)}</span><span class="ctx-highlight">${escHtml(s.raw_text)}</span><span class="ctx-after">${escHtml(s.context_after)}</span>
+    <div class="offsets">
+      <div><span class="k">char start</span><span class="v">${p.char_start.toLocaleString()}</span></div>
+      <div><span class="k">char end</span><span class="v">${p.char_end.toLocaleString()}</span></div>
+      <div><span class="k">length</span><span class="v">${(p.char_end - p.char_start).toLocaleString()}</span></div>
+      <div><span class="k">document</span><span class="v">${p.doc_length.toLocaleString()} ch</span></div>
+      <div><span class="k">confidence</span><span class="v">${(p.confidence * 100).toFixed(0)}%</span></div>
     </div>
-  `;
+    <div class="secn">Stored obligation text</div>
+    <div class="textbox">${esc(p.obligation_text.trim())}</div>
+    <div class="secn">Independently re-sliced from source — full_text[${p.char_start}:${p.char_end}]</div>
+    <div class="textbox" style="border-color:${p.verified ? 'rgba(12,163,12,.4)' : 'rgba(208,59,59,.4)'}">${esc(p.resliced.trim())}</div>
+    <div class="hint">${p.verified
+      ? 'The two strings are byte-identical, so this text provably came from the source document.'
+      : 'Mismatch detected — this result would be routed to needs_review.'}</div>
+
+    <div class="secn">In context</div>
+    <div class="ctxbox"><span class="dim">${esc(p.context_before)}</span><span class="hl">${esc(p.resliced)}</span><span class="dim">${esc(p.context_after)}</span></div>
+
+    <div class="secn">Provenance chain</div>
+    ${traceChain(t)}`;
 }
 
-// ---------------------------------------------------------------------------
-// Utilities
-// ---------------------------------------------------------------------------
-function escHtml(str) {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+function traceChain(t) {
+  const ob = t.obligation, map = (t.mapping || [])[0], gap = (t.gaps || [])[0];
+  const ev = t.evidence || [];
+  const nodes = [];
+
+  nodes.push(['◈', 'Regulation', ob.regulation_title,
+    `${ob.regulator} · clause ${ob.clause_path} · page ${ob.page_no ?? '—'}`]);
+  nodes.push(['◆', 'Obligation', `${ob.risk_tier} risk · ${ob.category || 'general'}`,
+    (ob.obligation_text || '').trim().slice(0, 200)]);
+
+  if (map && map.control_ref) {
+    nodes.push(['▣', 'Mapped control', `${map.control_ref} — ${map.title || ''}`,
+      `${map.rationale || ''} Owner: ${map.owner || '—'}.`]);
+  } else {
+    nodes.push(['▣', 'Mapped control', 'No control found',
+      'No control in the bank framework addresses this obligation.']);
+  }
+
+  if (ev.length) {
+    nodes.push(['▤', 'Evidence', ev[0].reference,
+      `Status: ${ev[0].status}. Captured ${ev[0].captured_on || '—'}. ${ev[0].note || ''}`]);
+  }
+  if (gap) {
+    nodes.push(['△', `Gap — ${gap.severity}`, `risk score ${(gap.risk_score ?? 0).toFixed(2)}`,
+      gap.rationale || '']);
+    if (gap.action) {
+      nodes.push(['✦', 'Remediation', `${gap.owner_role || '—'} · ${gap.effort || '—'} effort · due in ${gap.due_days}d`,
+        gap.action]);
+    }
+  } else {
+    nodes.push(['✓', 'No gap', 'Obligation is covered by an effective control', '']);
+  }
+
+  return `<div class="chain">${nodes.map(([i, k, title, txt]) => `
+    <div class="node"><div class="n-ico">${i}</div>
+      <div class="n-body"><div class="n-kind">${esc(k)}</div>
+        <div class="n-title">${esc(title)}</div>
+        ${txt ? `<div class="n-txt">${esc(txt)}</div>` : ''}</div></div>`).join('')}</div>`;
 }
 
-// ---------------------------------------------------------------------------
-// Event wiring
-// ---------------------------------------------------------------------------
-regSelect.addEventListener('change', () => {
-  if (regSelect.value) loadSections(regSelect.value);
-});
+/* ==================== gaps ==================== */
+function renderGaps() {
+  const list = DATA.gaps || [];
+  const el = $('#v-gaps');
+  if (!list.length) return el.innerHTML = emptyState();
+  const by = s => list.filter(g => g.severity === s).length;
 
-loadRegulations();
+  el.innerHTML = `
+    <h2 class="vh">Risk-prioritised compliance gaps</h2>
+    <p class="vs">Risk score = regulatory impact × likelihood, where likelihood comes from the
+      mapped control's own measured effectiveness. Each gap carries a generated remediation
+      with an owner and a due date.</p>
+    <div class="flexbet" style="margin-bottom:14px">
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <span class="chip critical">▲ critical ${by('critical')}</span>
+        <span class="chip high">▲ high ${by('high')}</span>
+        <span class="chip medium">■ medium ${by('medium')}</span>
+        <span class="chip low">▽ low ${by('low')}</span>
+      </div>
+    </div>
+    ${list.map(g => `
+      <div class="card" style="border-left:3px solid ${
+        g.severity === 'critical' ? 'var(--critical)' : g.severity === 'high' ? 'var(--serious)'
+        : g.severity === 'medium' ? 'var(--warning)' : 'var(--good)'}">
+        <div class="flexbet" style="margin-bottom:7px">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span class="chip ${g.severity}">${g.severity === 'critical' || g.severity === 'high' ? '▲' : g.severity === 'medium' ? '■' : '▽'} ${esc(g.severity)}</span>
+            <span class="mono" style="font-weight:650">${esc(g.clause_path)}</span>
+            <span class="chip neutral">${esc(g.regulation_title)}</span>
+            <span class="chip ${g.gap_type === 'no_control' ? 'critical' : 'medium'}">
+              ${g.gap_type === 'no_control' ? '✕ no control' : '◐ ' + esc(g.control_ref || 'weak control')}</span>
+          </div>
+          <span class="mono" style="color:var(--muted)">risk ${(g.risk_score ?? 0).toFixed(2)}</span>
+        </div>
+        <div style="font-size:12.5px;color:var(--ink-2);margin-bottom:8px">${esc((g.excerpt || '').trim())}</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:9px">${esc(g.rationale)}</div>
+        ${g.action ? `
+          <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px 12px">
+            <div class="n-kind" style="margin-bottom:3px">Recommended remediation</div>
+            <div style="font-size:12.5px;margin-bottom:6px">${esc(g.action)}</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <span class="chip neutral">👤 ${esc(g.owner_role || '—')}</span>
+              <span class="chip neutral">effort ${esc(g.effort || '—')}</span>
+              <span class="chip blue">due in ${g.due_days}d</span>
+              <span class="chip neutral">priority P${g.priority}</span>
+            </div></div>` : ''}
+      </div>`).join('')}`;
+}
+
+/* ==================== controls ==================== */
+function renderControls() {
+  const list = DATA.controls || [];
+  const el = $('#v-controls');
+  if (!list.length) return el.innerHTML = emptyState();
+
+  el.innerHTML = `
+    <h2 class="vh">Bank internal control framework</h2>
+    <p class="vs">Parsed from the bank's own control document with the same offset discipline
+      used for regulations. Effectiveness is taken from each control's most recent test result —
+      a control that failed its test cannot claim full coverage of an obligation.</p>
+    <div class="grid2">${list.map(c => {
+      const eff = c.effectiveness ?? 0;
+      const col = eff >= .9 ? 'var(--good)' : eff >= .5 ? 'var(--warning)' : 'var(--critical)';
+      return `<div class="card">
+        <div class="flexbet" style="margin-bottom:5px">
+          <span class="mono" style="font-weight:650;color:var(--s1)">${esc(c.control_ref)}</span>
+          <span class="chip ${eff >= .9 ? 'low' : eff >= .5 ? 'medium' : 'critical'}">
+            ${eff >= .9 ? '✓' : eff >= .5 ? '◐' : '✕'} ${esc(c.test_result || 'untested')}</span>
+        </div>
+        <div style="font-weight:600;font-size:13px;margin-bottom:4px">${esc(c.title)}</div>
+        <div style="font-size:12px;color:var(--ink-2);line-height:1.5;margin-bottom:8px">${esc(c.description)}</div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:7px">
+          <span class="chip neutral">${esc(c.owner || '—')}</span>
+          <span class="chip neutral">${esc(c.frequency || '—')}</span>
+          <span class="chip neutral">${esc(c.control_type || '—')}</span>
+          ${c.automated ? '<span class="chip blue">automated</span>' : ''}
+          <span class="chip ${c.mapped_obligations > 0 ? 'low' : 'medium'}">${c.mapped_obligations} obligations</span>
+        </div>
+        <div class="bar"><i style="width:${(eff * 100).toFixed(0)}%;background:${col}"></i></div>
+        <div class="hint">Effectiveness ${(eff * 100).toFixed(0)}% · evidence: ${esc(c.evidence_ref || 'none')}</div>
+      </div>`;
+    }).join('')}</div>`;
+}
+
+/* ==================== conflicts ==================== */
+function renderConflicts() {
+  const list = DATA.conflicts || [];
+  const el = $('#v-conflicts');
+  if (!list.length) return el.innerHTML = `<h2 class="vh">Regulatory conflicts</h2>
+    <p class="vs">No contradictions detected in the ingested corpus.</p>`;
+
+  el.innerHTML = `
+    <h2 class="vh">Cross-regulation conflicts <span class="chip medium">${list.length}</span></h2>
+    <p class="vs">Two regulations can impose requirements that cannot both be satisfied.
+      Accentic groups obligations by regulated subject, then compares periods, monetary
+      thresholds and modalities to surface the conflict and flag which rule governs.</p>
+    ${list.map(c => `
+      <div class="card" style="border-left:3px solid ${c.severity === 'critical' ? 'var(--critical)' : 'var(--serious)'}">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+          <span class="chip ${c.severity}">⚡ ${esc(c.severity)}</span>
+          <span class="chip neutral">${esc(c.conflict_type.replace(/_/g, ' '))}</span>
+          <span class="chip blue">confidence ${(c.confidence * 100).toFixed(0)}%</span>
+        </div>
+        <div style="font-size:13px;line-height:1.6;margin-bottom:12px">${esc(c.explanation)}</div>
+        <div class="grid2">
+          <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px 12px">
+            <div class="n-kind">${esc(c.regulation_a)} · ${esc(c.clause_a)}</div>
+            <div style="font-size:12px;color:var(--ink-2);margin-top:5px;line-height:1.5">${esc((c.text_a || '').trim())}</div>
+          </div>
+          <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px 12px">
+            <div class="n-kind">${esc(c.regulation_b)} · ${esc(c.clause_b)}</div>
+            <div style="font-size:12px;color:var(--ink-2);margin-top:5px;line-height:1.5">${esc((c.text_b || '').trim())}</div>
+          </div>
+        </div>
+      </div>`).join('')}`;
+}
+
+/* ==================== changes ==================== */
+function renderChanges() {
+  const list = DATA.changes || [];
+  const el = $('#v-changes');
+  if (!list.length) return el.innerHTML = emptyState();
+  const high = list.filter(c => c.impact_level === 'high');
+
+  el.innerHTML = `
+    <h2 class="vh">Regulatory change intelligence</h2>
+    <p class="vs">Diffed clause-by-clause against the superseded version. Changes that move a
+      number — a threshold, a percentage, a filing deadline — are flagged high impact because
+      they silently invalidate any control configured to the old value.</p>
+    <div style="margin-bottom:14px">
+      <span class="chip critical">▲ ${high.length} high impact</span>
+      <span class="chip neutral">${list.length} total changes</span>
+    </div>
+    <table>
+      <thead><tr><th>Clause</th><th>Type</th><th>What changed</th><th>Affects</th></tr></thead>
+      <tbody>${list.map(c => `
+        <tr>
+          <td class="mono" style="font-weight:650;color:${c.impact_level === 'high' ? 'var(--serious)' : 'var(--ink-2)'}">${esc(c.clause_path)}</td>
+          <td><span class="chip ${c.change_type === 'added' ? 'blue' : c.change_type === 'removed' ? 'critical' : 'medium'}">${esc(c.change_type)}</span></td>
+          <td style="color:var(--ink)">${esc(c.summary)}</td>
+          <td><span class="chip ${c.affected_count > 0 ? 'medium' : 'neutral'}">${c.affected_count} obligations</span></td>
+        </tr>`).join('')}</tbody>
+    </table>`;
+}
+
+/* ==================== simulate ==================== */
+const PRESETS = [
+  'RBI tightens the STR filing deadline from 7 days to 3 days',
+  'Beneficial ownership threshold reduced from 25 percent to 10 percent',
+  'Record retention extended to ten years for all customer transactions',
+  'Enhanced due diligence required for all non-resident customers',
+];
+
+function renderSimulate() {
+  const el = $('#v-simulate');
+  if (el.dataset.built) return;
+  el.dataset.built = '1';
+  el.innerHTML = `
+    <h2 class="vh">What-if impact simulation</h2>
+    <p class="vs">Describe a hypothetical regulatory change. The simulation agent matches it to
+      live obligations and walks the mapping and gap chain to report which controls would need
+      to change and where the bank is already exposed.</p>
+    <div class="simrow">
+      <input id="simIn" placeholder="e.g. RBI tightens the STR filing deadline to 3 days" />
+      <button class="run-btn" id="simGo">Simulate</button>
+    </div>
+    <div class="presets">${PRESETS.map(p => `<button class="preset">${esc(p)}</button>`).join('')}</div>
+    <div id="simOut"></div>`;
+
+  el.querySelectorAll('.preset').forEach(b => b.onclick = () => {
+    $('#simIn').value = b.textContent; runSim();
+  });
+  $('#simGo').onclick = runSim;
+  $('#simIn').onkeydown = e => { if (e.key === 'Enter') runSim(); };
+}
+
+async function runSim() {
+  const scenario = $('#simIn').value.trim();
+  if (!scenario) return;
+  $('#simOut').innerHTML = '<div class="empty">Tracing impact across the obligation graph…</div>';
+  const r = await api('/api/simulate', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ scenario }),
+  });
+  const s = r.summary || {}, rows = r.impact || [];
+  if (!rows.length) {
+    return $('#simOut').innerHTML = `<div class="empty"><div class="big">○</div>
+      No obligations matched that scenario. Try naming a subject such as suspicious
+      transactions, retention, beneficial ownership, or risk categorisation.</div>`;
+  }
+  $('#simOut').innerHTML = `
+    <div class="kpis" style="border-radius:var(--r);overflow:hidden;border:1px solid var(--border);margin-bottom:16px;grid-template-columns:repeat(3,1fr)">
+      <div class="kpi"><div class="label">Obligations affected</div><div class="value info">${s.affected}</div></div>
+      <div class="kpi"><div class="label">Controls to revisit</div><div class="value warn">${s.controls}</div></div>
+      <div class="kpi"><div class="label">Already uncovered</div><div class="value bad">${s.uncovered}</div></div>
+    </div>
+    <table><thead><tr><th>Clause</th><th>Risk</th><th>Obligation</th><th>Coverage</th><th>Control</th></tr></thead>
+    <tbody>${rows.map(i => `<tr>
+      <td class="mono" style="font-weight:650">${esc(i.clause_path)}</td>
+      <td><span class="chip ${i.risk_tier === 'high' ? 'critical' : i.risk_tier === 'medium' ? 'medium' : 'low'}">${esc(i.risk_tier)}</span></td>
+      <td>${esc(i.excerpt.trim())}</td>
+      <td><span class="chip ${i.coverage === 'none' ? 'critical' : i.coverage === 'partial' ? 'medium' : 'low'}">${esc(i.coverage)}</span></td>
+      <td class="mono">${esc(i.control_ref || '—')}</td>
+    </tr>`).join('')}</tbody></table>`;
+}
+
+function emptyState() {
+  return `<div class="empty"><div class="big">◇</div>
+    No analysis yet.<br>Press <b>Run Analysis</b> in the header to execute the agent pipeline.</div>`;
+}
+
+const RENDER = {
+  pipeline: () => { if (!$('#pipe')) pipelineShell(); },
+  obligations: renderObligations, gaps: renderGaps, controls: renderControls,
+  conflicts: renderConflicts, changes: renderChanges, simulate: renderSimulate,
+};
+
+/* ==================== boot ==================== */
+(async function init() {
+  renderTabs(); pipelineShell();
+  $('#runBtn').onclick = runPipeline;
+  try {
+    const s = await api('/api/status');
+    const claude = s.mode === 'claude';
+    $('#modeBadge').className = 'badge' + (claude ? ' live' : '');
+    $('#modeTxt').textContent = claude ? 'Claude Opus 5.5' : 'Rule engine (no API key)';
+    if (s.obligation > 0) await loadAll();
+  } catch { $('#modeTxt').textContent = 'offline'; }
+})();
 </script>
 </body>
 </html>

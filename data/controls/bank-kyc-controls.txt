@@ -1,0 +1,174 @@
+MERIDIAN BANK LIMITED
+Internal Control Framework — Customer Onboarding, AML & KYC
+Document Ref: MBL-ICF-KYC-v4.2
+Owner: Chief Compliance Officer
+Last Review: 2025-11-30
+
+SECTION A — CUSTOMER DUE DILIGENCE
+
+CTRL-KYC-001 | Identity Verification at Onboarding
+Description: All new account-based relationships require collection and system
+validation of one Officially Valid Document (OVD) for proof of identity and proof
+of address before the account is activated. The onboarding platform blocks
+activation until the OVD check returns a pass.
+Owner: Head of Onboarding Operations
+Frequency: Per transaction (real-time)
+Type: Preventive
+Automated: Yes
+Last Tested: 2025-10-14
+Test Result: Effective
+Evidence: OVD validation logs, Onboarding audit trail ONB-LOG-2025
+
+CTRL-KYC-002 | Legal Entity Documentation Pack
+Description: For non-individual customers the relationship manager must obtain
+certificate of incorporation, memorandum and articles of association, and the
+board resolution authorising signatories. Documents are indexed in the Entity
+Document Repository.
+Owner: Corporate Banking Operations
+Frequency: Per onboarding
+Type: Preventive
+Automated: No
+Last Tested: 2025-09-02
+Test Result: Partially Effective
+Evidence: Entity Document Repository index, sample pack review Q3-2025
+
+CTRL-KYC-003 | Beneficial Ownership Identification
+Description: Where the customer is a company, ownership is traced and any natural
+person holding more than 25 percent is recorded as a beneficial owner in the
+customer master. Identity of each beneficial owner is verified to the same
+standard as an individual customer.
+Owner: Financial Crime Unit
+Frequency: Per onboarding and on ownership change
+Type: Preventive
+Automated: Partially
+Last Tested: 2025-08-19
+Test Result: Partially Effective
+Evidence: Beneficial ownership register, UBO exception report
+
+CTRL-KYC-004 | Occasional Transaction Threshold Check
+Description: Walk-in and non-account-holder transactions are screened against a
+value threshold. Transactions at or above the regulatory threshold trigger
+mandatory customer identification before processing.
+Owner: Branch Operations
+Frequency: Per transaction (real-time)
+Type: Preventive
+Automated: Yes
+Last Tested: 2025-10-14
+Test Result: Effective
+Evidence: Teller system threshold config, TXN-THRESH-2025 report
+
+SECTION B — RISK CATEGORISATION
+
+CTRL-RISK-010 | Customer Risk Scoring Engine
+Description: Every customer is assigned a Low, Medium or High risk category at
+onboarding by the automated risk scoring engine using geography, product,
+occupation and transaction profile inputs.
+Owner: Financial Crime Unit
+Frequency: At onboarding
+Type: Detective
+Automated: Yes
+Last Tested: 2025-10-01
+Test Result: Effective
+Evidence: Risk engine configuration, scoring distribution report RISK-Q4
+
+CTRL-RISK-011 | Periodic Risk Review
+Description: Customer risk classification is re-evaluated on a fixed cycle. High
+risk customers are reviewed annually, medium risk every two years, low risk every
+three years. Reviews are tracked to completion in the compliance workflow tool.
+Owner: Financial Crime Unit
+Frequency: Annual / biennial / triennial by tier
+Type: Detective
+Automated: Partially
+Last Tested: 2025-07-22
+Test Result: Partially Effective
+Evidence: Periodic review completion dashboard, overdue review ageing report
+
+SECTION C — ENHANCED DUE DILIGENCE
+
+CTRL-EDD-020 | PEP Screening
+Description: All customers and beneficial owners are screened against a licensed
+politically exposed persons database at onboarding and rescreened nightly against
+list updates. Matches raise a case in the alert management system.
+Owner: Financial Crime Unit
+Frequency: At onboarding and nightly
+Type: Detective
+Automated: Yes
+Last Tested: 2025-10-28
+Test Result: Effective
+Evidence: Screening vendor logs, nightly batch completion records
+
+CTRL-EDD-021 | Senior Management Approval for High Risk Relationships
+Description: Establishing or continuing a relationship with a politically exposed
+person requires documented approval from the designated senior management
+approver before the account can transact.
+Owner: Chief Compliance Officer
+Frequency: Per PEP relationship
+Type: Preventive
+Automated: No
+Last Tested: 2025-06-11
+Test Result: Needs Improvement
+Evidence: PEP approval register — incomplete for 14 of 61 sampled relationships
+
+SECTION D — RECORD MANAGEMENT
+
+CTRL-REC-030 | Transaction Record Retention
+Description: Records of all customer transactions are retained in the archival
+platform for the regulatory minimum retention period from the date of the
+transaction and are retrievable on request by competent authorities.
+Owner: Head of Operations
+Frequency: Continuous
+Type: Preventive
+Automated: Yes
+Last Tested: 2025-09-30
+Test Result: Effective
+Evidence: Archive retention policy config, retrieval test ARC-TEST-0925
+
+CTRL-REC-031 | Transaction Reconstruction Capability
+Description: The archival platform supports reconstruction of individual
+transactions including counterparty, value, channel and timestamp to support
+evidentiary requests.
+Owner: Head of Operations
+Frequency: Continuous
+Type: Detective
+Automated: Yes
+Last Tested: 2025-09-30
+Test Result: Effective
+Evidence: Reconstruction test results, sample case pack
+
+SECTION E — REGULATORY REPORTING
+
+CTRL-RPT-040 | Cash Transaction Reporting
+Description: Cash transactions above the regulatory threshold are aggregated and
+submitted to the financial intelligence unit on the prescribed monthly cycle via
+the automated reporting gateway.
+Owner: Regulatory Reporting Team
+Frequency: Monthly
+Type: Detective
+Automated: Yes
+Last Tested: 2025-10-15
+Test Result: Effective
+Evidence: Monthly CTR submission acknowledgements
+
+CTRL-RPT-041 | Suspicious Transaction Reporting
+Description: Alerts confirmed as suspicious by an investigator are escalated and
+filed with the financial intelligence unit. Filing is tracked from conclusion of
+investigation to submission.
+Owner: Financial Crime Unit
+Frequency: Per case
+Type: Detective
+Automated: Partially
+Last Tested: 2025-08-05
+Test Result: Needs Improvement
+Evidence: STR case log — mean filing lag 11.4 days against 7 day requirement
+
+CTRL-GOV-050 | Principal Officer Designation
+Description: A Principal Officer is formally designated and their name,
+designation and address are communicated to the financial intelligence unit. The
+designation record is reviewed when the postholder changes.
+Owner: Company Secretary
+Frequency: On appointment and on change
+Type: Preventive
+Automated: No
+Last Tested: 2025-05-20
+Test Result: Effective
+Evidence: Board minute of designation, FIU acknowledgement letter

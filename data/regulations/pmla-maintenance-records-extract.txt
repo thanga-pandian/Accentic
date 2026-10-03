@@ -1,0 +1,39 @@
+Government of India
+Prevention of Money-Laundering (Maintenance of Records) Rules, 2005
+As amended — extract of principal obligations
+
+Chapter II
+Maintenance of Records of Transactions
+
+3. Maintenance of records of transactions
+Every reporting entity shall maintain the record of all transactions including the record of all cash transactions of the value of more than Rs. 10 lakh or its equivalent in foreign currency.
+
+4. Records of identity of clients
+Every reporting entity shall maintain the record of documents evidencing identity of its clients and beneficial owners as well as account files and business correspondence relating to its clients.
+
+5. Retention of records
+The records referred to in rule 3 shall be maintained for a period of ten years from the date of the transaction between a client and the reporting entity.
+
+6. Retention of identity records
+The records of the identity of clients shall be maintained for a period of five years after the business relationship between a client and the reporting entity has ended or the account has been closed, whichever is later.
+
+Chapter III
+Furnishing of Information
+
+7. Procedure for furnishing information
+Every reporting entity shall communicate to the Director the name, designation and address of the Designated Director and the Principal Officer.
+
+8. Furnishing of cash transaction reports
+The Principal Officer of a reporting entity shall furnish the information in respect of all cash transactions of the value of more than Rs. 10 lakh to the Director by the 15th day of the succeeding month.
+
+9. Furnishing of suspicious transaction reports
+The Principal Officer shall furnish the information in respect of all suspicious transactions to the Director within three working days of arriving at a conclusion that any transaction, whether cash or non-cash, or a series of transactions integrally connected are of suspicious nature.
+
+10. Verification of identity of clients
+Every reporting entity shall at the time of commencement of an account-based relationship identify its clients, verify their identity and obtain information on the purpose and intended nature of the business relationship.
+
+11. Enhanced due diligence for high risk clients
+Where the reporting entity determines that a client is of high risk, it shall apply enhanced due diligence measures and shall obtain the approval of senior management before establishing the business relationship.
+
+12. Client due diligence for occasional transactions
+Every reporting entity shall carry out client due diligence for any international money transfer operations and for occasional transactions of the value of more than Rs. 50,000.
