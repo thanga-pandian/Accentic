@@ -574,7 +574,10 @@ const CW = 208, CH = 88, NW = 174, NH = 58, PADX = 36, PADY = 24;
 const nx = col => PADX + col*CW;
 const ny = row => PADY + row*CH;
 
-function flowGraph(){
+/* `live` wires ids for state updates. The architecture view passes false so it
+   renders a static process diagram — reusing live ids there would duplicate
+   them in the document and leave those nodes stuck on their initial state. */
+function flowGraph(live = true){
   const w = PADX*2 + 4*CW + NW - 40, h = PADY*2 + 3*CH;
   const pos = {};
   NODES.forEach(([id,,,c,r]) => pos[id] = {x:nx(c), y:ny(r)});
@@ -584,26 +587,26 @@ function flowGraph(){
     const x1 = p.x+NW, y1 = p.y+NH/2, x2 = q.x, y2 = q.y+NH/2;
     const mx = (x1+x2)/2;
     const d = `M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`;
-    return `<path class="edge" id="e-${a}-${b}" d="${d}" fill="none"
+    return `<path class="edge" ${live?`id="e-${a}-${b}"`:''} d="${d}" fill="none"
       stroke="url(#eg)" stroke-width="1.8"/>
-      <circle class="spark" id="s-${a}-${b}" r="3.2" fill="#22d3ee"
-        style="offset-path:path('${d}');filter:drop-shadow(0 0 6px #22d3ee)"/>`;
+      ${live?`<circle class="spark" id="s-${a}-${b}" r="3.2" fill="#22d3ee"
+        style="offset-path:path('${d}');filter:drop-shadow(0 0 6px #22d3ee)"/>`:''}`;
   }).join('');
 
   const nodes = NODES.map(([id,label,short]) => {
     const p = pos[id];
-    return `<g class="nd" id="n-${id}" transform="translate(${p.x},${p.y})">
-      <rect class="halo" x="-4" y="-4" width="${NW+8}" height="${NH+8}" rx="15"
-        fill="none" stroke="#3987e5" stroke-width="2" opacity="0"/>
+    return `<g class="nd" ${live?`id="n-${id}"`:''} transform="translate(${p.x},${p.y})">
+      ${live?`<rect class="halo" x="-4" y="-4" width="${NW+8}" height="${NH+8}" rx="15"
+        fill="none" stroke="#3987e5" stroke-width="2" opacity="0"/>`:''}
       <rect class="bx" width="${NW}" height="${NH}" rx="12"
         fill="rgba(255,255,255,.045)" stroke="rgba(255,255,255,.12)" stroke-width="1"/>
       <text x="15" y="25" fill="#f2f4f8" font-size="12.5" font-weight="650"
         font-family="system-ui,sans-serif">${ICONS[id]} ${label}</text>
       <text x="15" y="42" fill="#6b7488" font-size="10.5"
         font-family="system-ui,sans-serif">${short}</text>
-      <circle class="sdot" cx="${NW-15}" cy="21" r="3.5" fill="#3d4456"/>
+      ${live?`<circle class="sdot" cx="${NW-15}" cy="21" r="3.5" fill="#3d4456"/>
       <text class="st" x="${NW-15}" y="40" fill="#6b7488" font-size="9" text-anchor="end"
-        font-family="ui-monospace,monospace" letter-spacing=".4">idle</text>
+        font-family="ui-monospace,monospace" letter-spacing=".4">idle</text>`:''}
     </g>`;
   }).join('');
 
@@ -1067,7 +1070,7 @@ function renderArchitecture(){
     </div>
 
     <div class="secn">Process flow</div>
-    ${flowGraph()}
+    ${flowGraph(false)}
     <div class="hint" style="margin:-6px 0 16px">Ingestion feeds obligation and control parsing in
       parallel; mapping joins them; gaps and remediation follow; the analysis agents fan out.</div>
 
