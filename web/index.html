@@ -381,6 +381,12 @@ p.vs{font-size:12px;color:var(--muted);margin-bottom:13px;max-width:820px;line-h
   background:var(--glass);border:1px solid var(--line);transition:.18s;
 }
 .preset:hover{border-color:rgba(57,135,229,.5);color:#fff;background:rgba(57,135,229,.12)}
+.preset.evon{
+  background:linear-gradient(135deg,rgba(57,135,229,.26),rgba(144,133,233,.16));
+  border-color:rgba(57,135,229,.55);color:#fff;font-weight:650;
+  box-shadow:0 0 16px rgba(57,135,229,.22);
+}
+.finding:hover{border-color:var(--line2);transform:translateY(-2px)}
 
 table{width:100%;border-collapse:collapse;font-size:12px}
 th{
@@ -424,14 +430,9 @@ tr:hover td{background:rgba(255,255,255,.03)}
 <nav id="tabs"></nav>
 
 <main>
-  <div class="view on" id="v-pipeline"></div>
-  <div class="view" id="v-obligations"></div>
-  <div class="view" id="v-gaps"></div>
-  <div class="view" id="v-controls"></div>
-  <div class="view" id="v-conflicts"></div>
-  <div class="view" id="v-changes"></div>
-  <div class="view" id="v-simulate"></div>
-  <div class="view" id="v-architecture"></div>
+  <div class="view on" id="v-findings"></div>
+  <div class="view" id="v-evidence"></div>
+  <div class="view" id="v-how"></div>
 </main>
 </div>
 
@@ -487,11 +488,22 @@ const api = async (p, o) => (await fetch(p, o)).json();
 
 /* ==================== config ==================== */
 const TABS = [
-  ['pipeline','Agent Pipeline',null], ['obligations','Obligations','obligation'],
-  ['gaps','Gaps & Fixes','gap'], ['controls','Bank Controls','control'],
-  ['conflicts','Conflicts','contradiction'], ['changes','Change Impact','reg_change'],
-  ['simulate','What-If',null], ['architecture','Architecture',null],
+  ['findings', '① What we found', null],
+  ['evidence', '② See the proof', null],
+  ['how',      '③ How it works',  null],
 ];
+
+/* Sub-views inside Evidence. Nesting these keeps the top level to three
+   choices instead of eight, which was the main navigation complaint. */
+const EV = [
+  ['gaps',        'Compliance gaps',  'gap'],
+  ['obligations', 'Requirements',     'obligation'],
+  ['controls',    'Bank controls',    'control'],
+  ['conflicts',   'Rule conflicts',   'contradiction'],
+  ['changes',     'Rule changes',     'reg_change'],
+  ['simulate',    'What-if',          null],
+];
+let evMode = 'gaps';
 
 /* node layout for the flow graph: [id, label, short, col, row] */
 const NODES = [
@@ -534,12 +546,12 @@ function ring(pct, color){
    every data load restarted the entrance animation and the count-up, which read
    as flicker and showed stale mid-animation numbers. */
 const KPI_DEFS = [
-  {id:'obl',  l:'Obligations',        ring:false},
-  {id:'ver',  l:'Verified to source', ring:true},
-  {id:'cov',  l:'Control coverage',   ring:true},
-  {id:'gaps', l:'Open gaps',          ring:false},
-  {id:'conf', l:'Conflicts',          ring:false},
-  {id:'rev',  l:'Needs review',       ring:false},
+  {id:'obl',  l:'Rules found',            ring:false},
+  {id:'ver',  l:'Claims we can prove',    ring:true},
+  {id:'cov',  l:'Rules you actually cover', ring:true},
+  {id:'gaps', l:'Compliance gaps',        ring:false},
+  {id:'conf', l:'Rules that contradict',  ring:false},
+  {id:'rev',  l:'Sent to a human',        ring:false},
 ];
 
 function buildKpis(){
@@ -558,14 +570,20 @@ function updateKpis(s){
   const sev = s.severity || {}, crit = (sev.critical||0)+(sev.high||0);
   const cov = s.coverage_pct ?? 0, ver = s.verification_pct ?? 0;
   const vals = {
-    obl:  {n:s.obligation??0,    c:'#8cc0f5', note:`${s.reg_section??0} clauses parsed`},
-    ver:  {n:ver, suf:'%', c:ver===100?'#6ad06a':'#f8cb6a', pct:ver, rl:ver===100?'✓':Math.round(ver)+'%',
-           note:'char-offset re-sliced'},
+    obl:  {n:s.obligation??0, c:'#8cc0f5',
+           note:`read from ${s.regulation??0} regulations`},
+    ver:  {n:ver, suf:'%', c:ver===100?'#6ad06a':'#f8cb6a', pct:ver,
+           rl:ver===100?'✓':Math.round(ver)+'%',
+           note:ver===100?'nothing was invented':'some claims unproven'},
     cov:  {n:cov, suf:'%', c:cov>=50?'#6ad06a':cov>=25?'#f8cb6a':'#f49090', pct:cov,
-           rl:Math.round(cov)+'%', note:`${s.control??0} controls mapped`},
-    gaps: {n:s.gap??0,          c:crit>0?'#f49090':'#6ad06a', note:`${crit} critical or high`},
-    conf: {n:s.contradiction??0, c:(s.contradiction>0)?'#f8cb6a':'#6ad06a', note:'across regulations'},
-    rev:  {n:s.needs_review??0,  c:(s.needs_review>0)?'#f8cb6a':'#6ad06a', note:'routed to a human'},
+           rl:Math.round(cov)+'%',
+           note:`the rest are exposure`},
+    gaps: {n:s.gap??0, c:crit>0?'#f49090':'#6ad06a',
+           note:`${crit} need urgent action`},
+    conf: {n:s.contradiction??0, c:(s.contradiction>0)?'#f8cb6a':'#6ad06a',
+           note:'you cannot satisfy both'},
+    rev:  {n:s.needs_review??0, c:(s.needs_review>0)?'#f8cb6a':'#6ad06a',
+           note:'nothing dropped silently'},
   };
   for(const [id,v] of Object.entries(vals)){
     const tile = $('#k-'+id); if(!tile) continue;
@@ -859,13 +877,156 @@ const AGENT_STAGE = {
   MappingAgent:3, GapAgent:4, ContradictionAgent:4, ChangeAgent:0, SimulationAgent:4,
 };
 
-function pipelineShell(){
-  $('#v-pipeline').innerHTML = `
+/* ==================== findings ====================
+   Derived from the live run, not hardcoded. Each one states the problem in
+   business terms and links to the evidence that proves it. */
+function deriveFindings(){
+  const out = [];
+  const gaps = DATA.gaps || [], conflicts = DATA.conflicts || [];
+  const controls = DATA.controls || [], changes = DATA.changes || [];
+
+  // 1. A control the bank's OWN testing says is failing.
+  // Among equally-failing controls, lead with one whose evidence carries a
+  // hard number — "11.4 days against 7" lands harder than a vague finding.
+  const quantified = e => /\d/.test(e?.evidence_ref || '') ? 0 : 1;
+  const failing = controls
+    .filter(c => (c.effectiveness ?? 1) < 0.5)
+    .sort((a,b) => (a.effectiveness??0) - (b.effectiveness??0)
+                   || quantified(a) - quantified(b))[0];
+  if(failing){
+    const dependents = gaps.filter(g => g.control_ref === failing.control_ref).length;
+    out.push({
+      tone:'critical',
+      headline:`${failing.title} is failing its own test`,
+      detail:`The bank's latest test of ${failing.control_ref} returned “${failing.test_result}”. `
+        + `Its own evidence reads: ${failing.evidence_ref || 'no evidence on file'}.`,
+      impact:`${dependents} requirement${dependents===1?'':'s'} depend${dependents===1?'s':''} on this control.`,
+      cta:'Show the failing control', go:['evidence','controls'],
+    });
+  }
+
+  // 2. Two regulators demanding incompatible things. Prefer a cross-regulation
+  //    clash, then a short operational deadline over a multi-year retention
+  //    period — a 3-vs-7-day filing rule bites sooner than 5-vs-10 years.
+  const rank = c => (c.regulation_a !== c.regulation_b ? 0 : 10)
+    + ({critical:0, high:1, medium:2}[c.severity] ?? 3)
+    + (/\b\d+ days?\b/.test(c.explanation||'') ? 0 : 4);
+  const xreg = [...conflicts].sort((a,b) => rank(a) - rank(b))[0];
+  if(xreg){
+    const subject = (xreg.explanation||'')
+      .split(/ (?:across regulations|within the same regulation)/)[0]
+      .trim() || 'Two rules';
+    out.push({
+      tone: xreg.severity==='critical' ? 'critical' : 'high',
+      headline:`${subject}: the two regulations disagree`,
+      detail:xreg.explanation,
+      impact:'A system configured to one rule is in breach of the other.',
+      cta:'Show the conflict', go:['evidence','conflicts'],
+    });
+  }
+
+  // 3. Requirements with no control whatsoever.
+  const naked = gaps.filter(g => g.gap_type === 'no_control');
+  const urgent = naked.filter(g => ['critical','high'].includes(g.severity));
+  if(naked.length){
+    out.push({
+      tone: urgent.length ? 'critical' : 'medium',
+      headline:`${naked.length} requirements have no control at all`,
+      detail:`Nothing in the bank's control framework addresses them — not a weak control, `
+        + `none. ${urgent.length} carry critical or high regulatory risk.`,
+      impact:'Each is an unmitigated finding if a regulator inspects tomorrow.',
+      cta:'Show the gaps', go:['evidence','gaps'],
+    });
+  }
+
+  // 4. A rule that tightened and may have left controls stale.
+  const tightened = changes.find(c => c.impact_level==='high' && /→/.test(c.summary||''));
+  if(tightened){
+    out.push({
+      tone:'medium',
+      headline:'A regulation tightened since your last review',
+      detail:tightened.summary,
+      impact:`Affects ${tightened.affected_count} requirement${tightened.affected_count===1?'':'s'}. `
+        + 'Any control still configured to the old number is now non-compliant.',
+      cta:'Show what changed', go:['evidence','changes'],
+    });
+  }
+  return out;
+}
+
+function renderFindings(){
+  const el = $('#v-findings');
+  const found = deriveFindings();
+  if(!found.length) return el.innerHTML = emptyState();
+
+  const tone = t => t==='critical' ? ['var(--critical)','critical','▲']
+    : t==='high' ? ['var(--serious)','high','▲'] : ['var(--warning)','medium','■'];
+
+  el.innerHTML = `
     ${narrativeFlow()}
-    <p class="vs" style="margin:-2px 0 14px">Regulations in, prioritised remediation out. The
-      gate in the middle is what makes the rest trustworthy: every extracted claim is re-sliced
-      from the original document before it is allowed downstream.
-      Press <b style="color:var(--ink)">Run Analysis</b> to watch the eight agents execute.</p>
+    <div class="flexbet" style="margin:14px 0 10px">
+      <div>
+        <h2 class="vh">What Accentic found</h2>
+        <p class="vs" style="margin:2px 0 0">Real problems in this bank's compliance posture,
+          discovered by reading the regulations and the bank's own control documents.
+          Every claim links to the exact source text that proves it.</p>
+      </div>
+    </div>
+    ${found.map((f,i) => {
+      const [col,cls,ico] = tone(f.tone);
+      return `<div class="card finding" data-go="${f.go.join(',')}"
+        style="border-left:3px solid ${col};cursor:pointer;animation:rise .4s backwards;animation-delay:${i*70}ms">
+        <div style="display:flex;gap:14px;align-items:flex-start">
+          <div style="width:30px;height:30px;border-radius:9px;flex-shrink:0;display:grid;
+            place-items:center;font-weight:750;font-size:14px;background:${col}22;
+            color:${col};border:1px solid ${col}66">${i+1}</div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:5px">
+              <span style="font-size:15px;font-weight:680;letter-spacing:-.2px">${esc(f.headline)}</span>
+              <span class="chip ${cls}">${ico} ${cls}</span>
+            </div>
+            <div style="font-size:12.5px;color:var(--ink2);line-height:1.6">${esc(f.detail)}</div>
+            <div style="font-size:12px;color:${col};margin-top:6px;font-weight:600">${esc(f.impact)}</div>
+          </div>
+          <span class="chip blue" style="flex-shrink:0">${esc(f.cta)} →</span>
+        </div>
+      </div>`;
+    }).join('')}
+    ${stepNav(0)}`;
+
+  el.querySelectorAll('.finding').forEach(c => c.onclick = () => {
+    const [tab,mode] = c.dataset.go.split(',');
+    evMode = mode; show(tab);
+  });
+}
+
+/* Numbered path through the demo so there is always one obvious next move. */
+function stepNav(i){
+  const steps = ['What we found','See the proof','How it works'];
+  const next = i < 2 ? TABS[i+1][0] : null;
+  return `<div class="flexbet" style="margin-top:18px;padding-top:14px;
+    border-top:1px solid var(--line)">
+    <div style="display:flex;align-items:center;gap:8px">
+      ${steps.map((s,k) => `<span style="display:flex;align-items:center;gap:7px">
+        <span style="width:19px;height:19px;border-radius:50%;display:grid;place-items:center;
+          font-size:10px;font-weight:750;
+          background:${k===i?'var(--s1)':k<i?'rgba(12,163,12,.25)':'rgba(255,255,255,.07)'};
+          color:${k===i?'#fff':k<i?'#6ad06a':'var(--muted)'}">${k<i?'✓':k+1}</span>
+        <span style="font-size:11.5px;color:${k===i?'var(--ink)':'var(--muted)'};
+          font-weight:${k===i?600:400}">${s}</span>
+        ${k<2?'<span style="color:var(--muted);margin:0 3px">→</span>':''}
+      </span>`).join('')}
+    </div>
+    ${next?`<button class="run-btn" style="padding:8px 18px;font-size:12.5px"
+      onclick="show('${next}')">Next: ${steps[i+1]} →</button>`:''}
+  </div>`;
+}
+
+function pipelineShell(el){
+  el = el || $('#howPipe');
+  if(!el) return;
+  el.innerHTML = `
+    ${flowGraph(true)}
     <div class="alog" id="alog">${NODES.map(([id,label]) => `
       <div class="agent" id="ag-${id}">
         <div class="a-ico"><span>${ICONS[id]}</span></div>
@@ -886,7 +1047,7 @@ function runPipeline(){
   running = true;
   $('#runBtn').disabled = true;
   $('#runBtn').textContent = '◉ Running…';
-  show('pipeline'); pipelineShell();
+  show('how');                       // the agents are on screen 3
   $('#runBadge').style.display = ''; $('#runBadge').classList.add('live');
 
   const es = new EventSource('/api/run');
@@ -938,7 +1099,7 @@ async function finish(stats, err){
   [0,1,2,3,4].forEach(i => setStage(i,false));
   if(err){ alert('Pipeline error: '+err); return; }
   await loadAll();
-  pipelineShell();   // redraw the story with the counts this run produced
+  renderFindings();                  // refresh the headline with this run's numbers
   (DATA.runs||[]).forEach(r => {
     const rsn = $('#rsn-'+r.agent_name), tls = $('#tls-'+r.agent_name);
     if(rsn && r.reasoning){ rsn.style.display=''; rsn.textContent = r.reasoning; }
@@ -960,13 +1121,10 @@ async function loadAll(){
 }
 
 /* ==================== obligations ==================== */
-function renderObligations(){
-  const list = DATA.obligations||[], el = $('#v-obligations');
+function renderObligations(el){
+  const list = DATA.obligations||[];
   if(!list.length) return el.innerHTML = emptyState();
   el.innerHTML = `
-    <h2 class="vh">Extracted obligations <span class="chip blue">${list.length}</span></h2>
-    <p class="vs">Each obligation was located in the source by Python, never by the model.
-      Select one to re-slice the original document and prove the stored text is authentic.</p>
     <div class="split">
       <div class="list">${list.map((o,i) => `
         <div class="row" data-i="${i}">
@@ -981,15 +1139,17 @@ function renderObligations(){
           </div>
           <div class="row-txt">${esc((o.obligation_text||'').trim())}</div>
         </div>`).join('')}</div>
-      <div class="detail" id="obDetail">
-        <div class="empty"><div class="big">◆</div>Select an obligation to see its proof of origin.</div>
-      </div>
+      <div class="detail" id="obDetail"></div>
     </div>`;
   el.querySelectorAll('.row').forEach(r => r.onclick = async () => {
     el.querySelectorAll('.row').forEach(x => x.classList.remove('on'));
     r.classList.add('on');
     await showProof(list[+r.dataset.i]);
   });
+  // Open the highest-risk item rather than an empty pane, so the proof
+  // mechanism is visible without the reviewer guessing where to click.
+  const first = el.querySelector('.row');
+  if(first){ first.classList.add('on'); showProof(list[0]); }
 }
 
 async function showProof(o){
@@ -1055,18 +1215,17 @@ function traceChain(t){
 }
 
 /* ==================== gaps ==================== */
-function renderGaps(){
-  const list = DATA.gaps||[], el = $('#v-gaps');
+function renderGaps(el){
+  const list = DATA.gaps||[];
   if(!list.length) return el.innerHTML = emptyState();
   const by = s => list.filter(g => g.severity===s).length;
   const col = s => s==='critical'?'var(--critical)':s==='high'?'var(--serious)'
     :s==='medium'?'var(--warning)':'var(--good)';
   el.innerHTML = `
-    <h2 class="vh">Risk-prioritised compliance gaps</h2>
-    <p class="vs">Risk score = regulatory impact × likelihood, where likelihood comes from the
-      mapped control's own measured effectiveness. Each gap carries a generated remediation
-      with an owner and a due date.</p>
-    <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px">
+    <p class="hint" style="margin:0 0 11px">A gap is a rule the bank does not properly cover.
+      Ranked by how bad it would be × how likely it is, using the bank's own control test
+      results. Each one comes with a suggested fix, an owner and a deadline.</p>
+    <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px">
       <span class="chip critical">▲ critical ${by('critical')}</span>
       <span class="chip high">▲ high ${by('high')}</span>
       <span class="chip medium">■ medium ${by('medium')}</span>
@@ -1100,14 +1259,13 @@ function renderGaps(){
 }
 
 /* ==================== controls ==================== */
-function renderControls(){
-  const list = DATA.controls||[], el = $('#v-controls');
+function renderControls(el){
+  const list = DATA.controls||[];
   if(!list.length) return el.innerHTML = emptyState();
   el.innerHTML = `
-    <h2 class="vh">Bank internal control framework</h2>
-    <p class="vs">Parsed from the bank's own control document with the same offset discipline
-      used for regulations. Effectiveness comes from each control's most recent test result —
-      a control that failed its test cannot claim full coverage of an obligation.</p>
+    <p class="hint" style="margin:0 0 11px">These are the bank's own procedures, read from its
+      internal control document. The bar shows how well each one scored at its last test —
+      a control that failed cannot be counted as covering a rule.</p>
     <div class="grid2">${list.map((c,i) => {
       const eff = c.effectiveness??0;
       const col = eff>=.9?'#0ca30c':eff>=.5?'#fab219':'#d03b3b';
@@ -1131,15 +1289,14 @@ function renderControls(){
 }
 
 /* ==================== conflicts ==================== */
-function renderConflicts(){
-  const list = DATA.conflicts||[], el = $('#v-conflicts');
-  if(!list.length) return el.innerHTML = `<h2 class="vh">Regulatory conflicts</h2>
-    <p class="vs">No contradictions detected in the ingested corpus.</p>`;
+function renderConflicts(el){
+  const list = DATA.conflicts||[];
+  if(!list.length) return el.innerHTML =
+    `<p class="hint">No contradictions found between the loaded regulations.</p>`;
   el.innerHTML = `
-    <h2 class="vh">Cross-regulation conflicts <span class="chip medium">${list.length}</span></h2>
-    <p class="vs">Two regulations can impose requirements that cannot both be satisfied.
-      Accentic groups obligations by regulated subject, then compares periods, monetary
-      thresholds and modalities to surface the conflict and flag which rule governs.</p>
+    <p class="hint" style="margin:0 0 11px">Two regulators can demand things you cannot do at
+      the same time. Accentic groups rules by subject and compares their deadlines, money
+      thresholds and permissions to find the clashes — and says which one you must follow.</p>
     ${list.map((c,i) => `
       <div class="card" style="border-left:3px solid ${c.severity==='critical'?'var(--critical)':'var(--serious)'};animation:rise .4s backwards;animation-delay:${i*70}ms">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:11px;flex-wrap:wrap">
@@ -1162,16 +1319,15 @@ function renderConflicts(){
 }
 
 /* ==================== changes ==================== */
-function renderChanges(){
-  const list = DATA.changes||[], el = $('#v-changes');
+function renderChanges(el){
+  const list = DATA.changes||[];
   if(!list.length) return el.innerHTML = emptyState();
   const high = list.filter(c => c.impact_level==='high');
   el.innerHTML = `
-    <h2 class="vh">Regulatory change intelligence</h2>
-    <p class="vs">Diffed clause-by-clause against the superseded version. Changes that move a
-      number — a threshold, a percentage, a filing deadline — are flagged high impact because
-      they silently invalidate any control configured to the old value.</p>
-    <div style="margin-bottom:15px;display:flex;gap:7px;flex-wrap:wrap">
+    <p class="hint" style="margin:0 0 11px">What changed since the previous version of the rules.
+      Changes that move a <b>number</b> — a deadline, a threshold, a percentage — are the
+      dangerous ones: any system still set to the old value is now breaking the rule.</p>
+    <div style="margin-bottom:13px;display:flex;gap:7px;flex-wrap:wrap">
       <span class="chip critical">▲ ${high.length} high impact</span>
       <span class="chip neutral">${list.length} total changes</span>
     </div>
@@ -1192,15 +1348,11 @@ const PRESETS = [
   'Record retention extended to ten years for all customer transactions',
   'Enhanced due diligence required for all non-resident customers',
 ];
-function renderSimulate(){
-  const el = $('#v-simulate');
-  if(el.dataset.built) return;
-  el.dataset.built = '1';
+function renderSimulate(el){
   el.innerHTML = `
-    <h2 class="vh">What-if impact simulation</h2>
-    <p class="vs">Describe a hypothetical regulatory change. The simulation agent matches it to
-      live obligations and walks the mapping and gap chain to report which controls would need
-      to change and where the bank is already exposed.</p>
+    <p class="hint" style="margin:0 0 11px">Ask “what if a rule changed?” and Accentic traces
+      which requirements, which controls and which existing gaps that change would touch —
+      before it happens.</p>
     <div class="simrow">
       <input id="simIn" placeholder="e.g. RBI tightens the STR filing deadline to 3 days" />
       <button class="run-btn" id="simGo">Simulate</button>
@@ -1264,14 +1416,11 @@ const MODEL_SPLIT = [
   ['Contradiction detection','python','Numeric comparison must not be probabilistic'],
 ];
 
-function renderArchitecture(){
-  const el = $('#v-architecture'), s = STATS||{};
+function renderArchitecture(el){
+  const s = STATS||{};
   const val = k => (s[k]!=null ? s[k] : '—');
   el.innerHTML = `
-    <h2 class="vh">Structural architecture</h2>
-    <p class="vs">How the system is built, where AI is used and deliberately withheld, and the
-      evidence behind our declared position on the nine-blocker grid.</p>
-
+    <div class="secn" style="margin-top:20px">Design &amp; evidence</div>
     <div class="card" style="border-color:rgba(57,135,229,.4);background:linear-gradient(135deg,rgba(57,135,229,.1),rgba(144,133,233,.04))">
       <div class="n-kind" style="margin-bottom:7px">The core architectural decision</div>
       <div style="font-size:13.5px;line-height:1.7;color:var(--ink2)">
@@ -1283,11 +1432,6 @@ function renderArchitecture(){
         hallucination a <b style="color:#fff">measured quantity</b>, not a disclaimed risk.
       </div>
     </div>
-
-    <div class="secn">Process flow</div>
-    ${flowGraph(false)}
-    <div class="hint" style="margin:-6px 0 16px">Ingestion feeds obligation and control parsing in
-      parallel; mapping joins them; gaps and remediation follow; the analysis agents fan out.</div>
 
     <div class="grid2">
       <div class="card">
@@ -1357,21 +1501,59 @@ function blockerGrid(){
   return `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">${cells.join('')}</div>`;
 }
 
+/* ==================== evidence (screen 2) ==================== */
+function renderEvidence(){
+  const el = $('#v-evidence');
+  el.innerHTML = `
+    <h2 class="vh">See the proof</h2>
+    <p class="vs">Every number above resolves to text in a real document. Pick any item and
+      Accentic re-slices the original regulation at the exact character range it recorded,
+      so you can check it yourself.</p>
+    <div class="presets" style="margin-bottom:14px">${EV.map(([id,label,key]) => {
+      const n = key && STATS[key] != null ? ` <b style="opacity:.75">${STATS[key]}</b>` : '';
+      return `<button class="preset ev${evMode===id?' evon':''}" data-ev="${id}">${label}${n}</button>`;
+    }).join('')}</div>
+    <div id="evBody"></div>
+    <div id="evStep"></div>`;
+
+  el.querySelectorAll('.ev').forEach(b => b.onclick = () => {
+    evMode = b.dataset.ev; renderEvidence();
+  });
+  EV_RENDER[evMode]?.($('#evBody'));
+  $('#evStep').innerHTML = stepNav(1);
+}
+
+/* ==================== how it works (screen 3) ==================== */
+function renderHow(){
+  const el = $('#v-how');
+  el.innerHTML = `
+    <h2 class="vh">How it works</h2>
+    <p class="vs">Eight agents run the chain end to end. Each logs what it decided, which
+      tools it called, and whether it had to recover from a result it could not verify.</p>
+    <div id="howPipe"></div>
+    <div id="howArch"></div>
+    <div id="howStep"></div>`;
+  pipelineShell($('#howPipe'));
+  renderArchitecture($('#howArch'));
+  $('#howStep').innerHTML = stepNav(2);
+}
+
 function emptyState(){
   return `<div class="empty"><div class="big">◇</div>
     No analysis yet.<br>Press <b style="color:var(--ink)">Run Analysis</b> to execute the agent pipeline.</div>`;
 }
 
-const RENDER = {
-  pipeline: () => { if(!$('#alog')) pipelineShell(); },
-  obligations:renderObligations, gaps:renderGaps, controls:renderControls,
+const EV_RENDER = {
+  gaps:renderGaps, obligations:renderObligations, controls:renderControls,
   conflicts:renderConflicts, changes:renderChanges, simulate:renderSimulate,
-  architecture:renderArchitecture,
+};
+const RENDER = {
+  findings:renderFindings, evidence:renderEvidence, how:renderHow,
 };
 
 /* ==================== boot ==================== */
 (async function init(){
-  buildKpis(); renderTabs(); pipelineShell();
+  buildKpis(); renderTabs();
   $('#runBtn').onclick = runPipeline;
   try{
     const s = await api('/api/status');
@@ -1380,7 +1562,7 @@ const RENDER = {
     $('#modeTxt').textContent = claude ? 'Claude Opus 5.5' : 'Rule engine (no API key)';
     if(s.obligation>0){
       await loadAll();
-      pipelineShell();   // redraw the story now that STATS has real counts
+      renderFindings();
       const want = new URLSearchParams(location.search).get('tab');
       if(want && TABS.some(([t]) => t===want)) show(want, false);
       DATA.runs?.forEach(r => setNode(r.agent_name,'done','done'));
