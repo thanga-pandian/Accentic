@@ -53,7 +53,7 @@ def list_sections(regulation_id: Optional[str] = None):
                 cur.execute(
                     """
                     SELECT id, clause_path, page_no, char_start, char_end,
-                           LEFT(raw_text, 120) AS preview
+                           SUBSTR(raw_text, 1, 120) AS preview
                     FROM reg_section
                     WHERE regulation_id = %s
                     ORDER BY char_start
@@ -64,7 +64,7 @@ def list_sections(regulation_id: Optional[str] = None):
                 cur.execute(
                     """
                     SELECT id, clause_path, page_no, char_start, char_end,
-                           LEFT(raw_text, 120) AS preview
+                           SUBSTR(raw_text, 1, 120) AS preview
                     FROM reg_section
                     ORDER BY char_start
                     """

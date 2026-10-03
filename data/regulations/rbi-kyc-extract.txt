@@ -1,0 +1,98 @@
+Reserve Bank of India
+Master Direction - Know Your Customer (KYC) Direction, 2016
+(Updated as on February 04, 2025)
+
+Chapter I
+Preliminary
+
+1. Short title and commencement
+These Directions shall be called the Reserve Bank of India (Know Your Customer (KYC)) Directions, 2016 and shall come into force with immediate effect from the date of issue.
+
+2. Applicability
+These Directions shall be applicable to every Regulated Entity (RE) as defined under Section 3 of these Directions.
+
+Chapter II
+Definitions
+
+3. Definitions
+For the purposes of these Directions:
+
+(a) "Aadhaar number" shall have the same meaning as assigned to it in clause (a) of section 2 of the Aadhaar (Targeted Delivery of Financial and Other Subsidies, Benefits and Services) Act, 2016;
+
+(b) "Beneficial Owner" means the natural person(s), who ultimately owns or controls a client and/or the person on whose behalf a transaction is being conducted and includes a person who exercises ultimate effective control over a legal person or arrangement;
+
+(c) "Customer Due Diligence" (CDD) means identifying the customer and verifying the customer's identity using reliable, independent source documents, data or information;
+
+(d) "Designated Director" means a person designated by the RE to ensure overall compliance with the obligations imposed under chapter IV of the Prevention of Money-Laundering Act, 2002 and the rules made thereunder;
+
+13. Customer Due Diligence Procedure
+13.1 REs shall undertake CDD measures while:
+(i) commencing an account-based relationship;
+(ii) carrying out a transaction of Rs. 50,000 and above (whether conducted as a single transaction or several transactions that appear to be connected) for persons not holding an account with the RE;
+(iii) carrying out any international money transfer operations;
+(iv) when the RE has doubts about the veracity or adequacy of previously obtained customer identification data.
+
+13.2 REs shall obtain the following information/documents for the purpose of CDD:
+(i) For Individuals: an officially valid document (OVD) for proof of identity and proof of address.
+(ii) For Legal Entities: Certificate of incorporation/registration, Memorandum and Articles of Association, Board resolution authorising officials, and identification documents of beneficial owners holding more than 25% shares.
+
+13.3 Where the client is a company, the RE shall identify the beneficial owners and take reasonable measures to verify the identity of such persons, through the following information:
+(a) The identity of the natural person, who, whether acting alone or together, or through one or more juridical person, exercises control through ownership or who ultimately has a controlling ownership interest.
+
+22. Enhanced Due Diligence
+22.1 REs shall carry out Enhanced Due Diligence (EDD) for higher risk customers, including:
+(a) Politically Exposed Persons (PEPs) and their family members and close associates;
+(b) Non-Resident Customers;
+(c) High Net Worth Individuals;
+(d) Trusts, Charities, Non-Governmental Organizations and organisations receiving donations;
+(e) Customers from high risk countries as identified by FATF or other bodies.
+
+22.2 The REs shall:
+(i) obtain senior management approval for establishing business relationships with PEPs;
+(ii) take reasonable measures to establish the source of wealth and source of funds of customers and beneficial owners identified as PEPs;
+(iii) conduct enhanced ongoing monitoring of the business relationship.
+
+22.3 Where a customer is subsequently found to be, or subsequently becomes a PEP, REs shall obtain senior management approval to continue the business relationship and shall conduct enhanced monitoring of the business relationship on an ongoing basis.
+
+38. Risk Categorisation and Monitoring
+38.1 REs shall put in place a risk-based approach for management of risks. All the accounts opened shall be categorised under three risk categories: Low, Medium and High.
+
+38.2 Accounts of the following categories of customers shall be classified as Low Risk:
+(a) Salaried employees whose salary structures are well-defined;
+(b) People belonging to lower economic strata of society whose accounts show small balances and low turnover;
+(c) Government departments and Government-owned companies, regulators and statutory bodies.
+
+38.3 Accounts of customers that are not qualifying as Low or High Risk shall be classified as Medium Risk.
+
+38.4 Accounts of the following categories of customers shall be classified as High Risk:
+(a) Customers from high risk countries as identified by Financial Action Task Force (FATF);
+(b) Non-Resident Customers from high risk jurisdictions;
+(c) Politically Exposed Persons, their family members and close associates;
+(d) Accounts of non-face-to-face customers;
+(e) Customers engaged in business that is prone to high level of money laundering activities.
+
+38.5 REs shall apply enhanced due diligence measures for High Risk category accounts. The level and nature of monitoring shall be commensurate with the risk categorisation of the customer. REs shall periodically review the risk classification of its existing customers and where the risk profile changes, update the customer's profile accordingly.
+
+46. Record Management
+46.1 REs shall maintain the records of all the transactions, including the record of:
+(i) all cash transactions of the value of more than Rs. 10 lakh or its equivalent in foreign currency;
+(ii) all series of cash transactions integrally connected to each other which have been valued below Rs. 10 lakh or its equivalent in foreign currency where such series of transactions have taken place within a month;
+(iii) all cash transactions where forged or counterfeit currency notes or bank notes have been used as genuine or where any forgery of a valuable security or a document has taken place facilitating the transactions;
+(iv) all suspicious transactions whether or not made in cash.
+
+46.2 The records referred to in paragraph 46.1 shall be maintained for a period of five years from the date of the transactions between the RE and the customer. Such records shall be made available on request to the competent authorities.
+
+46.3 REs shall ensure that the records referred to above are maintained in a manner that allows the reconstruction of individual transactions so as to provide, if necessary, evidence for prosecution of criminal behaviour.
+
+53. Reporting Requirements
+53.1 REs shall report to Financial Intelligence Unit-India (FIU-IND) information relating to:
+(a) Cash Transaction Report (CTR): All cash transactions of the value of more than Rs. 10 lakh or its equivalent in foreign currency, to be reported every month by the 15th of the succeeding month;
+(b) Suspicious Transaction Report (STR): All suspicious transactions, whether or not made in cash, to be reported within 7 days of arriving at a conclusion that any transaction, whether cash or non-cash, or a series of transactions integrally connected are of suspicious nature.
+
+53.2 For the purpose of reporting under 53.1, a "suspicious transaction" means a transaction whether or not made in cash which, to a person acting in good faith:
+(i) gives rise to a reasonable ground of suspicion that it may involve the proceeds of crime; or
+(ii) appears to be made in circumstances of unusual or unjustified complexity; or
+(iii) appears to have no economic rationale or bonafide purpose; or
+(iv) gives rise to a reasonable ground of suspicion that it may involve financing of the activities relating to terrorism.
+
+53.3 REs shall designate a Principal Officer for the purposes of reporting and shall communicate the name, designation and address of the Principal Officer to the FIU-IND and keep the same updated at all times. The Principal Officer shall be responsible for timely submission of CTR, STR and any other report as required under the extant anti-money laundering laws.

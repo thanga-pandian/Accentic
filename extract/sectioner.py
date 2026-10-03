@@ -12,9 +12,8 @@ import argparse
 import json
 import re
 import sys
+import uuid
 from pathlib import Path
-
-import psycopg
 
 from db.connection import get_connection
 
@@ -130,16 +129,17 @@ def _split_sections(
     return sections
 
 
-def _insert_regulation(conn: psycopg.Connection, source_path: Path, full_text: str) -> str:
+def _insert_regulation(conn, source_path: Path, full_text: str) -> str:
+    reg_id = str(uuid.uuid4())
     with conn.cursor() as cur:
         cur.execute(
             """
             INSERT INTO regulation
-                (regulator, jurisdiction, title, version, source_url, full_text)
-            VALUES (%s, %s, %s, %s, %s, %s)
-            RETURNING id
+                (id, regulator, jurisdiction, title, version, source_url, full_text)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
             """,
             (
+                reg_id,
                 "RBI",
                 "India",
                 source_path.stem,
@@ -148,24 +148,24 @@ def _insert_regulation(conn: psycopg.Connection, source_path: Path, full_text: s
                 full_text,
             ),
         )
-        return cur.fetchone()[0]
+    return reg_id
 
 
-def _insert_section(
-    conn: psycopg.Connection, regulation_id: str, section: dict, full_text: str
-) -> None:
+def _insert_section(conn, regulation_id: str, section: dict, full_text: str) -> None:
     assert full_text[section["char_start"] : section["char_end"]] == section["raw_text"], (
         f"Offset assertion failed for clause {section['clause_path']}: "
         f"slice does not match raw_text"
     )
+    sec_id = str(uuid.uuid4())
     with conn.cursor() as cur:
         cur.execute(
             """
             INSERT INTO reg_section
-                (regulation_id, clause_path, page_no, raw_text, char_start, char_end)
-            VALUES (%s, %s, %s, %s, %s, %s)
+                (id, regulation_id, clause_path, page_no, raw_text, char_start, char_end)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
             """,
             (
+                sec_id,
                 regulation_id,
                 section["clause_path"],
                 section["page_no"],
@@ -176,19 +176,14 @@ def _insert_section(
         )
 
 
-def _insert_needs_review(
-    conn: psycopg.Connection,
-    stage: str,
-    payload: dict,
-    reason: str,
-) -> None:
+def _insert_needs_review(conn, stage: str, payload: dict, reason: str) -> None:
     with conn.cursor() as cur:
         cur.execute(
             """
-            INSERT INTO needs_review (stage, payload, failure_reason)
-            VALUES (%s, %s, %s)
+            INSERT INTO needs_review (id, stage, payload, failure_reason)
+            VALUES (%s, %s, %s, %s)
             """,
-            (stage, json.dumps(payload), reason),
+            (str(uuid.uuid4()), stage, json.dumps(payload), reason),
         )
 
 
