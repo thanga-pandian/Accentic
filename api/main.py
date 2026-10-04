@@ -345,6 +345,69 @@ def trace(obligation_id: str):
     }
 
 
+class Claim(BaseModel):
+    quote: str
+
+
+@app.post("/api/verify-claim")
+def verify_claim(body: Claim):
+    """
+    Adversarial check: hand the system any sentence and see whether it can be
+    proved from the source corpus. Uses the same anchor() the pipeline uses, so
+    this is the real gate, not a demonstration of one.
+    """
+    from agents.base import VerificationError, anchor
+
+    quote = (body.quote or "").strip()
+    if not quote:
+        raise HTTPException(400, "empty claim")
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id, title, regulator, full_text FROM regulation")
+            regs = cur.fetchall()
+
+        for reg_id, title, regulator, full_text in regs:
+            try:
+                start, end = anchor(quote, full_text, 0)
+            except VerificationError:
+                continue
+
+            sliced = full_text[start:end]
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT clause_path, page_no FROM reg_section
+                    WHERE regulation_id = %s AND char_start <= %s AND char_end >= %s
+                    ORDER BY char_start DESC LIMIT 1
+                    """,
+                    (reg_id, start, end),
+                )
+                row = cur.fetchone()
+
+            return {
+                "verified": True,
+                "regulation": title,
+                "regulator": regulator,
+                "clause_path": row[0] if row else None,
+                "page_no": row[1] if row else None,
+                "char_start": start,
+                "char_end": end,
+                "resliced": sliced,
+                "exact": sliced == quote,
+                "context_before": full_text[max(0, start - 220):start],
+                "context_after": full_text[end:end + 220],
+            }
+
+    return {
+        "verified": False,
+        "reason": "This text does not appear in any ingested regulation.",
+        "action": "Rejected at the verification gate and routed to needs_review "
+                  "for a human. It is never stored as a finding.",
+        "searched": len(regs),
+    }
+
+
 class Scenario(BaseModel):
     scenario: str
 

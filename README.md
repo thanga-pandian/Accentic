@@ -1,95 +1,99 @@
-# Accentic — Compliance Document Analysis
+# Accentic — Agentic Regulatory Compliance
 
-Ingests RBI regulatory PDFs, extracts sections with exact character offsets,
-and provides a browser viewer where every clause is traceable to a precise
-location in the original document.
+**ET AI Hackathon: Agentic Edition — Problem 1 (Banking/Financial Regulations)**
 
-## Quick start
+Eight agents maintain a traceable chain from regulation to remediation:
 
-### 1. Database
-
-```bash
-# With Docker (preferred)
-docker compose up -d
-docker compose ps   # wait for "healthy"
-
-# Or use a local Postgres installation
-# Create database: assent_compliance, user: assent, password: assent, port: 5433
+```
+Regulations → obligations → applicability → internal controls → evidence
+            → testing → gaps → remediation → ongoing monitoring
 ```
 
-### 2. Environment
+The differentiator is that **every claim resolves to an exact character range in a source
+document**, and the system proves it by re-slicing the original rather than trusting its own
+record. A model may decide *what* is an obligation; Python decides *where* it exists. A quote
+that cannot be located is rejected as a hallucination, retried, then quarantined for a human.
 
-```bash
-cp .env.example .env
-# Edit .env and fill in ANTHROPIC_API_KEY
-```
+Submission components: this demo, and [ARCHITECTURE.md](ARCHITECTURE.md).
 
-### 3. Python dependencies
+---
+
+## Run it
 
 ```bash
 pip install -r requirements.txt
+cp .env.example .env          # optional: add ANTHROPIC_API_KEY
+python -m db.migrate
+PYTHONPATH=. python -m uvicorn api.main:app --port 8000
 ```
 
-### 4. Run the migration
+Open <http://localhost:8000> and press **Run Analysis**.
+
+> **It runs with no API key.** Obligation extraction falls back to a real rule engine
+> (modal-verb detection), and the header badge says which mode is live, so rule output is
+> never passed off as model output. Set `ANTHROPIC_API_KEY` to route extraction through
+> `claude-opus-5-5`.
+
+### Verify the central claim yourself
 
 ```bash
-python db/migrate.py
+PYTHONPATH=. python -m tests.test_verification   # 14/14 — anchoring, recovery, quarantine
+python -m extract.verify_offsets --audit         # expect 100%
+python -m extract.verify_offsets 38.             # expect PASS
 ```
 
-### 5. Ingest a regulation PDF
+Or attack it live: **See the proof → Try to break it**. Paste any sentence. A real one
+resolves to its clause and offsets; change a single number and it is rejected. That panel
+calls the same gate the pipeline uses.
 
-```bash
-# Dry run first — check clause paths and page numbers before writing to DB
-python -m extract.sectioner data/regulations/rbi-kyc.pdf --dry-run
+---
 
-# Full ingest
-python -m extract.sectioner data/regulations/rbi-kyc.pdf
+## The three screens
+
+| Screen | What it answers |
+|---|---|
+| **① What we found** | The real problems in this bank's posture, in plain English, each linked to its proof |
+| **② See the proof** | Gaps, requirements, controls, conflicts, changes, the adversarial check, what-if |
+| **③ How it works** | The eight agents with their reasoning and tool calls, plus the architecture |
+
+---
+
+## Agents
+
+| Agent | Responsibility |
+|---|---|
+| `IngestionAgent` | Parse documents, compute offsets, self-audit every slice |
+| `ObligationAgent` | Extract obligations, anchor each to source, recover or quarantine |
+| `ControlAgent` | Parse the bank control framework, grade effectiveness, link evidence |
+| `MappingAgent` | Map obligations to controls, discounted by measured effectiveness |
+| `GapAgent` | Score gaps by impact × likelihood, generate prioritised remediation |
+| `ContradictionAgent` | Detect conflicting periods, thresholds and modalities across regulations |
+| `ChangeAgent` | Diff against the prior version and name the numeric delta |
+| `SimulationAgent` | What-if blast radius across the live obligation graph |
+
+---
+
+## Layout
+
+```
+agents/          the eight agents, llm client, orchestrator
+extract/         sectioner (offsets) and the offset verifier
+db/              schema, connection, migration    (SQLite dev · Postgres prod)
+api/main.py      FastAPI + SSE stream of the live run
+web/index.html   single-file UI — no framework, no CDN, no build step
+prompts/         the extraction prompt, loaded at runtime
+tests/           verification-contract tests
+data/            regulations, prior versions, bank control framework
 ```
 
-### 6. Verify offsets
+## Inputs
 
-```bash
-# Spot-check a specific clause
-python -m extract.verify_offsets 38
+`data/regulations/` holds RBI KYC and PMLA extracts plus a `prior-*` version used for change
+intelligence. `data/controls/` holds the bank's internal control framework. The sectioner
+accepts `.pdf` (via pdfplumber) or `.txt`; drop the official PDF in and the pipeline runs on
+it unchanged.
 
-# Audit all sections (should report 100%)
-python -m extract.verify_offsets --audit
-```
+## Production database
 
-### 7. Start the viewer
-
-```bash
-uvicorn api.main:app --reload --port 8000
-```
-
-Open [http://localhost:8000](http://localhost:8000).
-
-## Project layout
-
-```
-data/regulations/       raw PDF inputs (not committed)
-extract/
-  sectioner.py          PDF/TXT → regulation + reg_section rows
-  verify_offsets.py     offset spot-check and audit
-db/
-  schema.sql            table definitions (regulation, reg_section, needs_review)
-  connection.py         psycopg connection helper
-  migrate.py            idempotent schema apply
-api/
-  main.py               FastAPI: /api/regulations, /api/sections, /api/sections/{id}
-web/
-  index.html            single-file viewer (no build step)
-prompts/
-  obligation_extraction.md   Sprint 2 LLM prompt
-```
-
-## PDF fallback
-
-If pdfplumber produces bad text for a PDF, create a plain-text fixture instead:
-
-```bash
-# data/regulations/rbi-kyc-extract.txt — paste real clauses by hand
-python -m extract.sectioner data/regulations/rbi-kyc-extract.txt --dry-run
-```
-
-The sectioner accepts `.pdf` or `.txt` — everything downstream is identical.
+`docker-compose.yml` provisions Postgres 16 with pgvector. Point `DATABASE_URL` at it and
+`db/schema.sql` applies the same model; nothing else changes.

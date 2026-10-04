@@ -501,6 +501,7 @@ const EV = [
   ['controls',    'Bank controls',    'control'],
   ['conflicts',   'Rule conflicts',   'contradiction'],
   ['changes',     'Rule changes',     'reg_change'],
+  ['breakit',     'Try to break it',  null],
   ['simulate',    'What-if',          null],
 ];
 let evMode = 'gaps';
@@ -1501,6 +1502,87 @@ function blockerGrid(){
   return `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">${cells.join('')}</div>`;
 }
 
+/* ==================== adversarial check ====================
+   Hands the reviewer the same gate the pipeline uses. The point is that they
+   get to attack it: a real quote passes, a single altered digit does not. */
+const BREAK_CASES = [
+  ['real',    'A real sentence from the RBI circular',
+   'REs shall apply enhanced due diligence measures for High Risk category accounts.'],
+  ['altered', 'The same sentence with one number changed',
+   'The records referred to in paragraph 46.1 shall be maintained for a period of ten years'],
+  ['plausible','A plausible-sounding rule that was never written',
+   'REs shall obtain biometric authentication for all transactions above Rs. 5,000.'],
+  ['invented','A confidently worded invention',
+   'Every bank must appoint a Chief Crypto Officer within 30 days of this circular.'],
+];
+
+function renderBreakIt(el){
+  el.innerHTML = `
+    <p class="hint" style="margin:0 0 12px">Accentic claims it cannot invent a finding.
+      Test that claim. Paste any sentence — or use a preset — and it will try to locate it
+      in the source documents. This runs the <b>same gate</b> the pipeline uses, not a
+      demonstration of one.</p>
+    <div class="simrow">
+      <input id="bkIn" placeholder="Paste a claim and see whether it can be proved…" />
+      <button class="run-btn" id="bkGo">Check it</button>
+    </div>
+    <div class="presets">${BREAK_CASES.map(([k,label,q]) =>
+      `<button class="preset bk" data-q="${esc(q)}" title="${esc(q)}">${label}</button>`).join('')}</div>
+    <div id="bkOut"></div>`;
+  el.querySelectorAll('.bk').forEach(b => b.onclick = () => {
+    $('#bkIn').value = b.dataset.q; runBreak();
+  });
+  $('#bkGo').onclick = runBreak;
+  $('#bkIn').onkeydown = e => { if(e.key==='Enter') runBreak(); };
+}
+
+async function runBreak(){
+  const quote = $('#bkIn').value.trim();
+  if(!quote) return;
+  $('#bkOut').innerHTML = '<div class="empty">Searching the source documents…</div>';
+  const r = await api('/api/verify-claim', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({quote}),
+  });
+
+  if(!r.verified){
+    $('#bkOut').innerHTML = `
+      <div class="card" style="border-left:3px solid var(--critical)">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
+          <span class="verdict fail">✕ REJECTED</span>
+          <span style="font-size:13px;color:var(--ink2)">not found in ${r.searched} source documents</span>
+        </div>
+        <div style="font-size:13px;line-height:1.65;margin-bottom:9px">${esc(r.reason)}</div>
+        <div style="background:rgba(208,59,59,.09);border:1px solid rgba(208,59,59,.3);
+          border-radius:10px;padding:11px 13px;font-size:12.5px;color:#f5a989;line-height:1.6">
+          ${esc(r.action)}
+        </div>
+        <div class="hint">This is exactly what happens when the model hallucinates during a
+          real run — the claim never becomes a finding.</div>
+      </div>`;
+    return;
+  }
+
+  $('#bkOut').innerHTML = `
+    <div class="card" style="border-left:3px solid var(--good)">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:11px;flex-wrap:wrap">
+        <span class="verdict pass">✓ PROVED</span>
+        <span class="chip neutral">${esc(r.regulator)} · ${esc(r.regulation)}</span>
+        ${r.clause_path?`<span class="chip blue">clause ${esc(r.clause_path)}</span>`:''}
+        ${r.exact?'':'<span class="chip medium">matched ignoring line breaks</span>'}
+      </div>
+      <div class="offsets">
+        <div><span class="k">char start</span><span class="v">${r.char_start.toLocaleString()}</span></div>
+        <div><span class="k">char end</span><span class="v">${r.char_end.toLocaleString()}</span></div>
+        <div><span class="k">page</span><span class="v">${r.page_no ?? '—'}</span></div>
+      </div>
+      <div class="secn">Found here in the original document</div>
+      <div class="ctxbox"><span class="dim">${esc(r.context_before)}</span><span class="hl">${esc(r.resliced)}</span><span class="dim">${esc(r.context_after)}</span></div>
+      <div class="hint">Located by searching the document text — the position was computed,
+        not asserted.</div>
+    </div>`;
+}
+
 /* ==================== evidence (screen 2) ==================== */
 function renderEvidence(){
   const el = $('#v-evidence');
@@ -1546,6 +1628,7 @@ function emptyState(){
 const EV_RENDER = {
   gaps:renderGaps, obligations:renderObligations, controls:renderControls,
   conflicts:renderConflicts, changes:renderChanges, simulate:renderSimulate,
+  breakit:renderBreakIt,
 };
 const RENDER = {
   findings:renderFindings, evidence:renderEvidence, how:renderHow,

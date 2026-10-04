@@ -8,30 +8,15 @@ is retried once with the failure fed back, then quarantined.
 
 import re
 import uuid
+from pathlib import Path
 
 from agents import llm
 from agents.base import Agent, VerificationError, anchor
 
-SYSTEM = """You extract regulatory obligations from banking regulation text.
-
-An obligation is a single enforceable requirement placed on a regulated entity.
-One clause often contains several — split them.
-
-Return ONLY a JSON array. Each element:
-{
-  "quote": "<text copied EXACTLY and CONTIGUOUSLY from the clause>",
-  "actor": "who must act",
-  "modality": "must|must_not|should|may",
-  "action": "the required action, imperative voice",
-  "condition": "trigger or precondition, or null",
-  "deadline": "explicit time limit, or null",
-  "risk_tier": "high|medium|low",
-  "category": "cdd|edd|risk_rating|recordkeeping|reporting|governance|screening|other"
-}
-
-The "quote" MUST be a verbatim contiguous substring of the supplied clause.
-Never paraphrase, never join fragments with ellipses. If you cannot quote it
-exactly, omit the obligation."""
+# The prompt lives in prompts/ so it can be reviewed and tuned without touching
+# code. Behaviour it asks for is still enforced here, never trusted.
+_PROMPT_FILE = Path(__file__).resolve().parent.parent / "prompts" / "obligation_extraction.md"
+SYSTEM = _PROMPT_FILE.read_text(encoding="utf-8")
 
 _MODALS = [
     (r"\bshall not\b|\bmust not\b|\bshould not\b", "must_not"),
