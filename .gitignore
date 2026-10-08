@@ -15,3 +15,4 @@ env/
 *.iml
 data/regulations/*.pdf
 data/*.db
+data/uploads/

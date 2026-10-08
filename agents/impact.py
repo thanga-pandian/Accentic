@@ -19,18 +19,23 @@ class ChangeAgent(Agent):
     name = "ChangeAgent"
     stage = "change_intelligence"
 
-    def execute(self, conn, regulation_id: str, prior_path=None, **_) -> dict:
-        if prior_path is None or not prior_path.exists():
-            self.log(conn, "skipped", output_summary="no prior version supplied",
-                     model="rule_engine")
-            return {"summary": {"changes": 0}}
+    def execute(self, conn, regulation_id: str, prior_path=None, prior_text=None,
+                prior_label: str = "prior published version", **_) -> dict:
+        if prior_text is None:
+            if prior_path is None or not prior_path.exists():
+                self.log(conn, "skipped", output_summary="no prior version supplied",
+                         model="rule_engine")
+                return {"summary": {"changes": 0}}
+            prior_text = prior_path.read_text(encoding="utf-8")
+            source_label = prior_path.name
+        else:
+            source_label = prior_label
 
         with conn.cursor() as cur:
             cur.execute("SELECT full_text, version FROM regulation WHERE id = %s",
                         (regulation_id,))
             current_text, version = cur.fetchone()
 
-        prior_text = prior_path.read_text(encoding="utf-8")
         changes = self._diff_clauses(prior_text, current_text)
 
         with conn.cursor() as cur:
@@ -58,7 +63,7 @@ class ChangeAgent(Agent):
                     VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                     """,
                     (
-                        str(uuid.uuid4()), regulation_id, "prior", change["type"],
+                        str(uuid.uuid4()), regulation_id, prior_label, change["type"],
                         change["clause_path"], change["summary"],
                         change["before"], change["after"],
                         change["impact"], affected,
@@ -68,7 +73,7 @@ class ChangeAgent(Agent):
 
         self.log(
             conn, "ok",
-            input_summary=f"diff against {prior_path.name}",
+            input_summary=f"diff against {source_label}",
             output_summary=f"{len(changes)} clause-level changes",
             reasoning=(
                 "Segmented both versions by clause number and diffed matching clauses, "
@@ -167,13 +172,15 @@ class SimulationAgent(Agent):
         with conn.cursor() as cur:
             cur.execute(
                 f"""
-                SELECT o.id, o.clause_path, o.risk_tier, o.obligation_text,
-                       m.coverage, c.control_ref, c.test_result, g.severity, g.risk_score
+                SELECT o.id, COALESCE(o.clause_ref, o.clause_path), o.risk_tier,
+                       o.obligation_text, m.coverage, c.control_ref,
+                       COALESCE(c.independent_result, c.test_result), g.severity,
+                       g.risk_score
                 FROM obligation o
                 LEFT JOIN mapping m ON m.obligation_id = o.id
                 LEFT JOIN control c ON c.id = m.control_id
                 LEFT JOIN gap g ON g.obligation_id = o.id
-                WHERE {like}
+                WHERE o.applicability = 'applicable' AND ({like})
                 """,
                 params,
             )

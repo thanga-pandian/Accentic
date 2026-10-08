@@ -11,7 +11,7 @@ import uuid
 from pathlib import Path
 
 from agents import llm
-from agents.base import Agent, VerificationError, anchor
+from agents.base import Agent, VerificationError, anchor, clause_ref
 
 # The prompt lives in prompts/ so it can be reviewed and tuned without touching
 # code. Behaviour it asks for is still enforced here, never trusted.
@@ -38,7 +38,8 @@ _CATEGORIES = [
     (r"suspicious|str\b|ctr\b|fiu|report", "reporting"),
     (r"record|maintain|retain|five years|preserv", "recordkeeping"),
     (r"enhanced due diligence|edd\b|politically exposed|pep\b", "edd"),
-    (r"risk categor|low risk|medium risk|high risk|risk profile", "risk_rating"),
+    (r"risk categor|low risk|medium risk|high risk|risk profile|risk-based approach",
+     "risk_rating"),
     (r"due diligence|cdd\b|identif|verif|officially valid", "cdd"),
     (r"principal officer|designated director|senior management|board", "governance"),
     (r"sanction|screen|watch ?list|fatf", "screening"),
@@ -50,6 +51,21 @@ _DEADLINE = re.compile(
     r"period of \w+ years?",
     re.I,
 )
+
+
+def _categorise(text: str) -> str:
+    # "reporting entity" names the addressee, not a reporting duty.
+    scrubbed = re.sub(r"reporting entit(?:y|ies)", "entity", text, flags=re.I)
+    return next(
+        (c for pattern, c in _CATEGORIES if re.search(pattern, scrubbed, re.I)), "other"
+    )
+
+
+def _parent_lead(full_text: str, start: int) -> str:
+    """The lead-in line of the numbered clause that a lettered limb belongs to."""
+    head = full_text[max(0, start - 900):start]
+    marks = list(re.finditer(r"(?m)^\d{1,3}(?:\.\d{1,3})*\.?\s", head))
+    return head[marks[-1].start():].split("\n", 1)[0] if marks else ""
 
 
 def _sentences(text: str) -> list[str]:
@@ -70,10 +86,7 @@ def _rule_extract(section_text: str) -> list[dict]:
         risk = "high" if _HIGH_RISK.search(sentence) else (
             "low" if _LOW_RISK.search(sentence) else "medium"
         )
-        category = next(
-            (c for pattern, c in _CATEGORIES if re.search(pattern, sentence, re.I)),
-            "other",
-        )
+        category = _categorise(sentence)
         deadline_match = _DEADLINE.search(sentence)
 
         actor_match = re.search(
@@ -152,6 +165,11 @@ class ObligationAgent(Agent):
                     rejected += 1
                     continue
 
+                ref = clause_ref(full_text, start)
+                category = cand.get("category") or "other"
+                if category == "other" and "(" in ref:
+                    category = _categorise(_parent_lead(full_text, start))
+
                 with conn.cursor() as cur:
                     cur.execute(
                         """
@@ -159,16 +177,16 @@ class ObligationAgent(Agent):
                             (id, section_id, regulation_id, clause_path, obligation_text,
                              actor, modality, action, condition, deadline, risk_tier,
                              category, char_start, char_end, verified, confidence,
-                             extracted_by, page_no)
-                        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                             extracted_by, page_no, clause_ref)
+                        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                         """,
                         (
                             str(uuid.uuid4()), sec_id, regulation_id, clause_path,
                             sliced, cand.get("actor"), cand.get("modality"),
                             cand.get("action"), cand.get("condition"),
                             cand.get("deadline"), cand.get("risk_tier", "medium"),
-                            cand.get("category", "other"), start, end, 1,
-                            0.92 if source == "claude" else 0.78, source, page_no,
+                            category, start, end, 1,
+                            0.92 if source == "claude" else 0.78, source, page_no, ref,
                         ),
                     )
                 stored += 1

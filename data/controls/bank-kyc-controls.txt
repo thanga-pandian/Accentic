@@ -81,7 +81,7 @@ Type: Detective
 Automated: Partially
 Last Tested: 2025-07-22
 Test Result: Partially Effective
-Evidence: Periodic review completion dashboard, overdue review ageing report
+Evidence: Periodic review completion dashboard — 312 of 4,180 high-risk reviews overdue
 
 SECTION C — ENHANCED DUE DILIGENCE
 
@@ -147,7 +147,7 @@ Type: Detective
 Automated: Yes
 Last Tested: 2025-10-15
 Test Result: Effective
-Evidence: Monthly CTR submission acknowledgements
+Evidence: Monthly CTR submission acknowledgements — 1 of 12 submissions filed after the 15th-day deadline
 
 CTRL-RPT-041 | Suspicious Transaction Reporting
 Description: Alerts confirmed as suspicious by an investigator are escalated and

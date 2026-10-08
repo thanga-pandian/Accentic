@@ -20,7 +20,8 @@ _client = None
 
 
 def available() -> bool:
-    return bool(os.environ.get("ANTHROPIC_API_KEY", "").strip())
+    key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+    return bool(key) and not key.endswith("...")   # the .env.example placeholder
 
 
 def mode() -> str:
@@ -44,12 +45,16 @@ def complete_json(system: str, prompt: str, max_tokens: int = 8000) -> list | di
         return None
 
     try:
-        with _get_client().messages.stream(
+        # Server-side fallback: if a safety classifier declines, the API re-runs the
+        # request on a fallback model inside the same call. Output is still verified.
+        with _get_client().beta.messages.stream(
             model=MODEL,
             max_tokens=max_tokens,
             system=system,
             thinking={"type": "adaptive"},
             output_config={"effort": "medium"},
+            betas=["server-side-fallback-2026-07-01"],
+            fallbacks="default",
             messages=[{"role": "user", "content": prompt}],
         ) as stream:
             response = stream.get_final_message()

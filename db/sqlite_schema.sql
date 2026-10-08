@@ -60,6 +60,11 @@ CREATE TABLE IF NOT EXISTS obligation (
     confidence      REAL NOT NULL DEFAULT 0.0,
     extracted_by    TEXT NOT NULL DEFAULT 'rule_engine',
     page_no         INTEGER,
+    clause_ref      TEXT,
+    applicability   TEXT NOT NULL DEFAULT 'applicable',
+    applicability_reason TEXT,
+    applies_to      TEXT,
+    applicability_reviewed INTEGER NOT NULL DEFAULT 0,
     created_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_obligation_regulation ON obligation (regulation_id);
@@ -91,12 +96,30 @@ CREATE TABLE IF NOT EXISTS control (
     last_tested     TEXT,
     test_result     TEXT,
     effectiveness   REAL NOT NULL DEFAULT 0.0,
+    reported_effectiveness REAL,
+    independent_result TEXT,
     char_start      INTEGER NOT NULL,
     char_end        INTEGER NOT NULL,
     verified        INTEGER NOT NULL DEFAULT 0,
     created_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_control_doc ON control (control_doc_id);
+
+-- ===========================================================================
+-- Control testing: independent re-performance, not the control owner's say-so
+-- ===========================================================================
+CREATE TABLE IF NOT EXISTS control_test (
+    id              TEXT PRIMARY KEY,
+    control_id      TEXT NOT NULL REFERENCES control(id) ON DELETE CASCADE,
+    test_type       TEXT NOT NULL,
+    procedure       TEXT NOT NULL,
+    result          TEXT NOT NULL,
+    metric          TEXT,
+    threshold       TEXT,
+    conclusion      TEXT NOT NULL,
+    created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_control_test_control ON control_test (control_id);
 
 -- ===========================================================================
 -- Feature 7: Evidence-based compliance assessment
@@ -124,6 +147,8 @@ CREATE TABLE IF NOT EXISTS mapping (
     rationale       TEXT,
     method          TEXT NOT NULL DEFAULT 'lexical',
     confidence      REAL NOT NULL DEFAULT 0.0,
+    scope_gap       TEXT,
+    reviewed        INTEGER NOT NULL DEFAULT 0,
     created_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_mapping_obligation ON mapping (obligation_id);
@@ -212,3 +237,89 @@ CREATE TABLE IF NOT EXISTS agent_run (
     created_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_agent_run_runid ON agent_run (run_id);
+
+-- ===========================================================================
+-- Ongoing monitoring. source_snapshot and kri_snapshot persist across runs,
+-- they are the memory of what the system saw last time.
+-- ===========================================================================
+CREATE TABLE IF NOT EXISTS monitor_alert (
+    id              TEXT PRIMARY KEY,
+    alert_type      TEXT NOT NULL,
+    severity        TEXT NOT NULL,
+    title           TEXT NOT NULL,
+    detail          TEXT,
+    due_date        TEXT,
+    ref_type        TEXT,
+    ref_id          TEXT,
+    created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS source_snapshot (
+    id              TEXT PRIMARY KEY,
+    run_id          TEXT NOT NULL,
+    kind            TEXT NOT NULL,
+    path            TEXT NOT NULL,
+    sha256          TEXT NOT NULL,
+    content         TEXT,
+    captured_at     TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_source_snapshot_path ON source_snapshot (path, captured_at);
+
+-- Trainability: reviewer decisions persist across runs. They override the
+-- agent on the obligation they name and teach the mapping model for others.
+CREATE TABLE IF NOT EXISTS review_decision (
+    id              TEXT PRIMARY KEY,
+    obligation_key  TEXT NOT NULL,
+    target          TEXT NOT NULL,
+    regulator       TEXT,
+    clause_ref      TEXT,
+    obligation_text TEXT NOT NULL,
+    system_value    TEXT,
+    decided_value   TEXT NOT NULL,
+    note            TEXT,
+    reviewer        TEXT NOT NULL,
+    decided_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_review_key ON review_decision (obligation_key, target);
+
+-- Remediation workflow: tasks outlive runs, keyed on the obligation, so status,
+-- owner and comments survive re-analysis. The SLA clock starts at first detection.
+CREATE TABLE IF NOT EXISTS remediation_task (
+    id              TEXT PRIMARY KEY,
+    obligation_key  TEXT NOT NULL UNIQUE,
+    regulator       TEXT,
+    clause_ref      TEXT,
+    title           TEXT,
+    status          TEXT NOT NULL DEFAULT 'open',
+    assignee        TEXT,
+    first_detected  TEXT NOT NULL,
+    last_detected   TEXT,
+    closed_at       TEXT,
+    resolution      TEXT,
+    updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS task_comment (
+    id              TEXT PRIMARY KEY,
+    obligation_key  TEXT NOT NULL,
+    author          TEXT NOT NULL,
+    body            TEXT NOT NULL,
+    system          INTEGER NOT NULL DEFAULT 0,
+    created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_task_comment_key ON task_comment (obligation_key, created_at);
+
+CREATE TABLE IF NOT EXISTS kri_snapshot (
+    id              TEXT PRIMARY KEY,
+    run_id          TEXT NOT NULL,
+    obligations     INTEGER NOT NULL DEFAULT 0,
+    applicable      INTEGER NOT NULL DEFAULT 0,
+    coverage_pct    REAL NOT NULL DEFAULT 0.0,
+    gaps            INTEGER NOT NULL DEFAULT 0,
+    critical        INTEGER NOT NULL DEFAULT 0,
+    high            INTEGER NOT NULL DEFAULT 0,
+    verification_pct REAL NOT NULL DEFAULT 0.0,
+    failing_controls INTEGER NOT NULL DEFAULT 0,
+    alerts          INTEGER NOT NULL DEFAULT 0,
+    captured_at     TEXT NOT NULL DEFAULT (datetime('now'))
+);

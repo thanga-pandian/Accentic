@@ -1,0 +1,65 @@
+{
+  "name": "Meridian Bank Limited",
+  "entity_type": "Scheduled Commercial Bank",
+  "regulator_status": [
+    "Regulated Entity",
+    "Reporting Entity"
+  ],
+  "jurisdictions": [
+    "India"
+  ],
+  "assessment_date": "2025-12-15",
+  "business_units": {
+    "Retail Banking": "individual customers, savings and current accounts",
+    "Corporate Banking": "companies, legal entities and beneficial owners",
+    "Branch Network": "cash services and walk-in customers",
+    "Financial Crime Unit": "screening, monitoring, suspicious activity",
+    "Regulatory Reporting": "FIU-IND filings",
+    "Operations": "records, archival and retrieval",
+    "Compliance Office": "Principal Officer, Designated Director, approvals"
+  },
+  "activities": {
+    "individual_accounts": {
+      "label": "Individual customer accounts",
+      "enabled": true
+    },
+    "legal_entity_accounts": {
+      "label": "Company / legal-entity accounts",
+      "enabled": true
+    },
+    "walk_in_transactions": {
+      "label": "Walk-in / occasional transactions",
+      "enabled": true
+    },
+    "cash_handling": {
+      "label": "Cash deposits and withdrawals",
+      "enabled": true
+    },
+    "pep_relationships": {
+      "label": "Relationships with PEPs",
+      "enabled": true
+    },
+    "non_resident_customers": {
+      "label": "Non-resident customers",
+      "enabled": true
+    },
+    "non_face_to_face_onboarding": {
+      "label": "Non-face-to-face (digital) onboarding",
+      "enabled": true
+    },
+    "international_money_transfer": {
+      "label": "International money transfer operations",
+      "enabled": false
+    }
+  },
+  "risk_appetite": {
+    "min_coverage_pct": 60,
+    "max_critical_gaps": 0,
+    "min_verification_pct": 100,
+    "exception_tolerance_pct": 5
+  },
+  "test_cycle_days": {
+    "automated": 365,
+    "manual": 180
+  }
+}

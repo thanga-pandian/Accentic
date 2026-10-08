@@ -51,6 +51,16 @@ _SUBJECT_LABELS = {
 }
 
 
+# Periods that are minimums (keep for at least N), so the longer one is stricter.
+_MINIMUM_PERIODS = {"retention"}
+
+_OBJECTS = re.compile(r"identity|beneficial owner|account files|correspondence", re.I)
+
+
+def _objects(text: str) -> frozenset:
+    return frozenset(m.lower() for m in _OBJECTS.findall(text))
+
+
 def _subject(text: str) -> str | None:
     for name, pattern in _SUBJECTS.items():
         if re.search(pattern, text, re.I | re.S):
@@ -103,9 +113,11 @@ class ContradictionAgent(Agent):
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT o.id, o.clause_path, o.obligation_text, o.modality,
+                SELECT o.id, COALESCE(o.clause_ref, o.clause_path), o.obligation_text,
+                       o.modality,
                        r.title, o.regulation_id
                 FROM obligation o JOIN regulation r ON r.id = o.regulation_id
+                WHERE o.applicability = 'applicable'
                 """
             )
             rows = cur.fetchall()
@@ -167,17 +179,28 @@ class ContradictionAgent(Agent):
         clause_a = f"clause {clause_a.rstrip('.')}"
         clause_b = f"clause {clause_b.rstrip('.')}"
 
+        # Two rules about different objects (identity records vs transaction
+        # records) do not conflict, however different their numbers are.
+        if _objects(text_a) != _objects(text_b):
+            return None
+
         days_a, days_b = _days(text_a), _days(text_b)
         if days_a and days_b and days_a != days_b:
             ratio = max(days_a, days_b) / min(days_a, days_b)
             if ratio >= 1.5:
-                binding = min(days_a, days_b)
-                src = f"{reg_a} {clause_a}" if days_a < days_b else f"{reg_b} {clause_b}"
+                # A deadline is met by the earlier date; a retention duty is met
+                # by keeping records for the longer period. Either way the
+                # stricter requirement satisfies both rules.
+                longer_binds = subject in _MINIMUM_PERIODS
+                a_binds = (days_a > days_b) if longer_binds else (days_a < days_b)
+                binding = days_a if a_binds else days_b
+                src = f"{reg_a} {clause_a}" if a_binds else f"{reg_b} {clause_b}"
+                rule = "The longer period governs" if longer_binds else "The shorter period governs"
                 return (
                     "conflicting_period",
                     f"{subject_label} {scope}. {reg_a} {clause_a} requires "
                     f"{_humanise(days_a)}; {reg_b} {clause_b} requires "
-                    f"{_humanise(days_b)}. The shorter period governs — "
+                    f"{_humanise(days_b)}. {rule} — "
                     f"{_humanise(binding)} per {src} is the binding requirement.",
                     "high" if cross else "medium",
                     0.86,

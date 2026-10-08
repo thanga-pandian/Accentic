@@ -9,6 +9,7 @@ claim is as traceable as a regulatory one.
 import re
 import uuid
 
+from agents import profile as bank_profile
 from agents.base import Agent
 
 _BLOCK = re.compile(
@@ -40,8 +41,16 @@ class ControlAgent(Agent):
     stage = "control_ingestion"
 
     def execute(self, conn, control_path, **_) -> dict:
-        full_text = control_path.read_text(encoding="utf-8")
-        title_match = re.search(r"^(.+?)$", full_text.strip(), re.M)
+        if control_path.suffix.lower() == ".pdf":
+            import pdfplumber
+            with pdfplumber.open(control_path) as pdf:
+                full_text = "\n\n".join((p.extract_text() or "") for p in pdf.pages)
+        else:
+            full_text = control_path.read_text(encoding="utf-8")
+
+        head = [ln.strip() for ln in full_text.strip().splitlines()[:6] if ln.strip()]
+        title = head[1] if len(head) > 1 else (head[0] if head else control_path.stem)
+        ref_match = re.search(r"^Document Ref:\s*(.+)$", full_text, re.M)
 
         doc_id = str(uuid.uuid4())
         with conn.cursor() as cur:
@@ -52,15 +61,20 @@ class ControlAgent(Agent):
                 """,
                 (
                     doc_id,
-                    title_match.group(1).strip() if title_match else control_path.stem,
-                    "Meridian Bank Limited",
-                    "v4.2",
+                    title,
+                    head[0] if head else bank_profile.load().get("name"),
+                    ref_match.group(1).strip() if ref_match else None,
                     full_text,
                     str(control_path),
                 ),
             )
 
         matches = list(_BLOCK.finditer(full_text))
+        if not matches:
+            self.quarantine(
+                conn, {"document": control_path.name, "chars": len(full_text)},
+                "no controls recognised: expected 'CTRL-XXX-NNN | Title' blocks",
+            )
         stored = evidence_count = 0
 
         for idx, m in enumerate(matches):
