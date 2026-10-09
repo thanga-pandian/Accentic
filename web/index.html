@@ -527,17 +527,86 @@ kbd{white-space:nowrap;font:11px ui-monospace,Consolas,monospace;padding:1px 6px
 .tour-card p{font-size:13px;color:var(--ink-2)}
 .tour-card .nav{display:flex;gap:8px;margin-top:14px;align-items:center}
 
-/* Ask Accentic */
-.qa{display:flex;flex-direction:column;gap:14px}
-.qmsg{align-self:flex-end;max-width:75%;background:var(--accent);color:#fff;padding:10px 14px;border-radius:12px 12px 2px 12px;font-size:13.5px}
-[data-theme="dark"] .qmsg{color:#14051f}
-.amsg{align-self:flex-start;max-width:92%;background:var(--surface);border:1px solid var(--line);padding:14px 16px;border-radius:12px 12px 12px 2px;box-shadow:var(--shadow)}
-.amsg p{font-size:13.5px;line-height:1.65;margin-bottom:8px}
+/* Ask Accentic: floating assistant */
+.chat-fab{position:fixed;right:24px;bottom:24px;z-index:39;width:58px;height:58px;border-radius:50%;
+  background:linear-gradient(135deg,#7500c0,#a100ff 55%,#c25bff);color:#fff;display:grid;place-items:center;
+  box-shadow:0 10px 28px rgba(117,0,192,.45),0 2px 6px rgba(0,0,0,.2);transition:transform .2s cubic-bezier(.2,.9,.3,1.3),box-shadow .2s}
+.chat-fab:hover{transform:scale(1.07);box-shadow:0 14px 34px rgba(117,0,192,.55),0 2px 6px rgba(0,0,0,.2)}
+.chat-fab svg{width:26px;height:26px;transition:transform .25s}
+.chat-fab.open svg{transform:rotate(90deg)}
+.chat-fab .ring{position:absolute;inset:0;border-radius:50%;border:2px solid #b45cff;animation:fabpulse 2.6s ease-out infinite;pointer-events:none}
+.chat-fab.open .ring,.chat-fab.seen .ring{display:none}
+@keyframes fabpulse{0%{transform:scale(1);opacity:.7}70%,100%{transform:scale(1.55);opacity:0}}
+.chat-fab .dot{position:absolute;top:3px;right:3px;width:13px;height:13px;border-radius:50%;background:#ef4444;border:2px solid var(--bg);display:none}
+.chat-fab.unread .dot{display:block}
+.chat-fab .lbl{position:absolute;right:68px;white-space:nowrap;background:var(--ink);color:var(--surface);font-size:12px;font-weight:600;
+  padding:6px 10px;border-radius:8px;opacity:0;transform:translateX(6px);transition:opacity .15s,transform .15s;pointer-events:none}
+.chat-fab:hover .lbl{opacity:1;transform:none}
+.chat-fab.open .lbl{display:none}
+
+.chat-panel{position:fixed;right:24px;bottom:96px;z-index:39;width:410px;height:min(660px,calc(100vh - 128px));
+  display:flex;flex-direction:column;overflow:hidden;border-radius:20px;background:var(--bg);border:1px solid var(--line);
+  box-shadow:0 24px 60px rgba(16,24,40,.28),0 4px 14px rgba(16,24,40,.12);transform-origin:bottom right;
+  opacity:0;visibility:hidden;transform:translateY(18px) scale(.94);
+  transition:opacity .2s ease,transform .28s cubic-bezier(.2,.9,.3,1.15),visibility 0s linear .28s}
+.chat-panel.on{opacity:1;visibility:visible;transform:none;transition:opacity .2s ease,transform .28s cubic-bezier(.2,.9,.3,1.15)}
+.chat-head{display:flex;align-items:center;gap:11px;padding:14px 14px 14px 16px;color:#fff;
+  background:linear-gradient(135deg,#5b00a0,#8f00f0 55%,#b45cff)}
+.chat-head .avatar{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);position:relative}
+.chat-head .avatar::after{content:"";position:absolute;right:-2px;bottom:-2px;width:10px;height:10px;border-radius:50%;background:#22c55e;border:2px solid #7a00cc}
+.chat-head b{display:block;font-size:14.5px;font-weight:700}
+.chat-head small{display:block;font-size:11.5px;opacity:.85}
+.chat-head .acts{margin-left:auto;display:flex;gap:4px}
+.chat-head .acts button{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;color:#fff}
+.chat-head .acts button:hover{background:rgba(255,255,255,.16)}
+.chat-head .acts svg{width:17px;height:17px}
+.chat-head .acts .newc{display:none}
+.chat-panel.has .chat-head .acts .newc{display:grid}
+.chat-body{flex:1;overflow-y:auto;padding:16px 14px 8px;display:flex;flex-direction:column;gap:16px}
+
+.avatar{width:28px;height:28px;border-radius:9px;background:#a100ff;color:#fff;display:grid;place-items:center;font-weight:800;font-size:13px;flex-shrink:0}
+.msg{display:flex;gap:9px;align-items:flex-start}
+.msg.new{animation:msgin .3s cubic-bezier(.2,.9,.3,1.2)}
+@keyframes msgin{from{opacity:0;transform:translateY(10px) scale(.98)}}
+.msg.user{justify-content:flex-end}
+.msg.user .bubble{background:linear-gradient(135deg,#7500c0,#a100ff);color:#fff;border-radius:18px 18px 4px 18px;padding:9px 13px;max-width:82%;font-size:13px;white-space:pre-wrap;box-shadow:0 4px 12px rgba(117,0,192,.25)}
+.msg.bot .body{flex:1;min-width:0}
+.msg.bot .bubble{background:var(--surface);border:1px solid var(--line);border-radius:4px 18px 18px 18px;padding:11px 13px;box-shadow:var(--shadow)}
+.msg.bot .bubble p{font-size:13px;line-height:1.6;margin-bottom:7px}
+.msg.bot .bubble .src{font-size:12px}
+.msg-foot{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:11px;color:var(--muted);margin-top:5px}
+.msg-foot details summary{cursor:pointer}
+.msg-foot .iconbtn{width:24px;height:24px;border-radius:7px}
+.msg-foot .iconbtn svg{width:13px;height:13px}
+.msg-foot .chip svg{width:12px;height:12px}
+.typing{display:inline-flex;gap:4px;padding:5px 2px}
+.typing i{width:7px;height:7px;border-radius:50%;background:#a100ff;animation:typing 1.2s infinite ease-in-out}
+.typing i:nth-child(2){animation-delay:.15s}
+.typing i:nth-child(3){animation-delay:.3s}
+@keyframes typing{0%,80%,100%{opacity:.25;transform:translateY(0)}40%{opacity:1;transform:translateY(-4px)}}
+.welcome{display:flex;flex-direction:column;align-items:flex-start;gap:12px;animation:msgin .35s ease-out}
+.welcome .bubble{background:var(--surface);border:1px solid var(--line);border-radius:4px 18px 18px 18px;padding:12px 14px;font-size:13px;line-height:1.6;box-shadow:var(--shadow)}
+.welcome .bubble b{display:block;font-size:14px;margin-bottom:2px}
+.suggest{display:flex;flex-direction:column;gap:7px;width:100%;padding-left:37px}
+.suggest button{display:flex;align-items:center;gap:8px;text-align:left;padding:9px 12px;background:var(--surface);border:1px solid var(--accent-line);border-radius:999px;font-size:12.5px;color:var(--accent-ink);transition:background .15s,transform .15s}
+.suggest button:hover{background:var(--accent-soft);transform:translateX(3px)}
+.suggest svg{width:13px;height:13px;flex-shrink:0;margin-left:auto}
+.composer{padding:10px 12px 12px;border-top:1px solid var(--line);background:var(--surface)}
+.composer form{display:flex;align-items:flex-end;gap:8px;background:var(--surface-2);border:1px solid var(--line);border-radius:14px;padding:5px 5px 5px 13px;transition:border-color .15s,box-shadow .15s}
+.composer form:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.composer textarea{flex:1;border:none;background:transparent;resize:none;outline:none;font-size:13.5px;line-height:1.5;max-height:120px;padding:6px 0}
+.composer .send{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#7500c0,#a100ff);color:#fff;display:grid;place-items:center;flex-shrink:0;transition:transform .15s}
+.composer .send:hover:not(:disabled){transform:scale(1.06)}
+.composer .send:disabled{opacity:.4;cursor:default}
+.composer .send svg{width:17px;height:17px}
+.composer .hint{font-size:10.5px;color:var(--muted);text-align:center;margin-top:6px}
+@media (max-width:560px){
+  .chat-panel{right:0;bottom:0;width:100vw;height:100dvh;border-radius:0}
+  .chat-fab{right:16px;bottom:16px}
+}
 .cite{display:inline-flex;align-items:center;gap:4px;margin:0 3px 3px 0;padding:1px 8px;border-radius:999px;font-size:11.5px;font-weight:600;background:var(--good-bg);color:var(--good-ink);cursor:pointer;border:none}
 .cite.f{background:var(--info-bg);color:var(--info-ink)}
 .cite svg{width:12px;height:12px}
-.qbar{display:flex;gap:10px;position:sticky;bottom:0;background:var(--bg);padding:12px 0 2px}
-.qbar textarea{flex:1;resize:none;min-height:46px;max-height:140px}
 
 /* Kanban */
 .board{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-items:start}
@@ -561,7 +630,7 @@ kbd{white-space:nowrap;font:11px ui-monospace,Consolas,monospace;padding:1px 6px
 @media print{
   html,body{height:auto;overflow:visible;background:#fff}
   .shell{display:block;height:auto}
-  .side,.top,.runbar,.banner,.phead .acts,#tip,#toast,.scrim,.drawer,.btn,.iconbtn,details.review{display:none!important}
+  .side,.top,.runbar,.banner,.phead .acts,#tip,#toast,.scrim,.drawer,.btn,.iconbtn,details.review,.chat-fab,.chat-panel{display:none!important}
   .main,#view{overflow:visible;height:auto;padding:0}
   .card{box-shadow:none;break-inside:avoid}
   .grid.g2,.grid.g-7-5,.grid.g-5-7{grid-template-columns:1fr 1fr}
@@ -623,6 +692,8 @@ kbd{white-space:nowrap;font:11px ui-monospace,Consolas,monospace;padding:1px 6px
 </div>
 <div id="tip" role="tooltip"></div>
 <div id="toast" role="status" aria-live="polite"></div>
+<button class="chat-fab" id="chatFab" data-act="chattoggle" aria-label="Ask Accentic" aria-expanded="false" aria-controls="chatPanel"><span class="ring"></span><span id="fabIco"></span><span class="dot"></span><span class="lbl">Ask Accentic</span></button>
+<section class="chat-panel" id="chatPanel" role="dialog" aria-label="Ask Accentic" aria-hidden="true"></section>
 
 <script>
 'use strict';
@@ -697,6 +768,9 @@ const I = {
   refresh: P('<path d="M20 11a8 8 0 0 0-14.9-3M4 4v4h4M4 13a8 8 0 0 0 14.9 3M20 20v-4h-4"/>'),
   learn: P('<path d="M3 9l9-5 9 5-9 5z"/><path d="M7 11.5V16c0 1.5 2.2 3 5 3s5-1.5 5-3v-4.5M21 9v6"/>'),
   chat: P('<path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5"/>'),
+  send: P('<path d="M12 19V5M5 12l7-7 7 7"/>'),
+  copy: P('<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>'),
+  plus: P('<path d="M12 5v14M5 12h14"/>'),
   report: P('<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 17v-3M13 17v-5M16 17v-2"/>'),
   compass: P('<circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/>'),
   help: P('<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.6v.6M12 17v.5"/>'),
@@ -795,10 +869,10 @@ const applicable = () => S.obligations.filter(o => o.applicability === 'applicab
 /* =====================================================================
    Navigation and chrome
    ===================================================================== */
-/* Six places, each named for the question it answers. Pages inside a place are tabs. */
+/* Five places, each named for the question it answers. Pages inside a place are tabs.
+   Ask Accentic is the floating assistant, reachable from every page. */
 const SECTIONS = [
   {id:'home', label:'Dashboard', ic:'grid', q:'Our compliance at a glance', pages:[['overview', 'Summary']]},
-  {id:'ask', label:'Ask Accentic', ic:'chat', q:'Ask in plain English', pages:[['ask', 'Ask a question']]},
   {id:'issues', label:'Issues & actions', ic:'alert', q:'What’s wrong, who’s fixing it', pages:[['gaps', 'Issues'], ['remediation', 'Action board'], ['simulate', 'What-if']]},
   {id:'rules', label:'Regulations', ic:'file', q:'What the rules require', pages:[['obligations', 'Requirements'], ['changes', 'What changed'], ['conflicts', 'Conflicts'], ['sources', 'Documents']]},
   {id:'controls', label:'Our controls', ic:'shield', q:'How well we meet the rules', pages:[['controls', 'Controls & tests'], ['mapping', 'Coverage map'], ['profile', 'Bank profile']]},
@@ -810,7 +884,6 @@ const PAGE_INFO = Object.fromEntries(ALL_SECTIONS.flatMap(s => s.pages.map(([id,
 /* One plain sentence per page: shown on tab hover, in Help and in search. */
 const PAGE_HELP = {
   overview: 'The headline numbers, the biggest findings and the risk heatmap from the latest analysis.',
-  ask: 'Type a question about your obligations or compliance status. Every quoted citation is checked against the regulation text.',
   gaps: 'Every requirement the bank does not fully meet, ranked by risk, with the reason and the control involved.',
   remediation: 'One task per issue: who owns it, its status, its due date and its notes. Drag cards to change status.',
   simulate: 'Describe a possible rule change and see which requirements, controls and issues it would affect.',
@@ -829,7 +902,10 @@ const PAGE_HELP = {
   architecture: 'How the system is built: layers, agents, model usage and Responsible AI.',
 };
 const route = () => (location.hash.replace(/^#\/?/, '').split('?')[0]) || 'overview';
-const go = r => { if(route() === r) render(); else location.hash = '#/' + r; };
+const go = r => {
+  if(r === 'ask') return openChat();
+  if(route() === r) render(); else location.hash = '#/' + r;
+};
 const lastInSection = {};
 
 function navCount(id){
@@ -884,6 +960,7 @@ function paintTheme(){
 }
 
 function render(){
+  if(route() === 'ask'){ history.replaceState(null, '', '#/overview'); openChat(); }
   const r = PAGES[route()] ? route() : 'overview';
   const {section, label} = PAGE_INFO[r];
   lastInSection[section.id] = r;
@@ -978,7 +1055,10 @@ document.addEventListener('input', e => {
   UI.refresh ? UI.refresh() : render();
 });
 document.addEventListener('keydown', e => {
-  if(e.key === 'Escape') closeDrawer();
+  if(e.key === 'Escape'){
+    if($('#drawer').classList.contains('on')) closeDrawer();
+    else if(CHAT.open) ACTIONS.chatclose();
+  }
   const row = e.target.closest?.('tr.click');
   if(row && (e.key === 'Enter' || e.key === ' ')){ e.preventDefault(); row.click(); }
 });
@@ -1110,7 +1190,8 @@ function openHelp(){
     <dl class="kv" style="grid-template-columns:170px 1fr">${GLOSS.map(([k, v]) => `<dt style="color:var(--ink);font-weight:600">${esc(k)}</dt><dd class="ink2">${esc(v)}</dd>`).join('')}</dl>
     <h4 style="margin:18px 0 8px;font-size:13.5px">Shortcuts</h4>
     <dl class="kv"><dt><kbd>Ctrl K</kbd></dt><dd>Search everything: pages, requirements, controls, tasks, alerts</dd>
-      <dt><kbd>Esc</kbd></dt><dd>Close a panel, the search or the tour</dd>
+      <dt>Chat button</dt><dd>Ask Accentic, bottom right on every page: plain-English answers with verified citations</dd>
+      <dt><kbd>Esc</kbd></dt><dd>Close a panel, the chat, the search or the tour</dd>
       <dt>Click any row</dt><dd>Opens its full chain, from the regulation sentence to the fix</dd></dl>`;
 }
 ACTIONS.help = () => openHelp();
@@ -1384,56 +1465,112 @@ PAGES.overview = () => {
 
 /* ---------------------------------------------------------------- Ask Accentic */
 const QA_SUGGEST = [
-  'What do we have to report to FIU-IND, and are we compliant?',
   'How long must transaction records be kept?',
+  'What must we do to screen customers against UN sanctions lists?',
   'Do we need senior management approval for PEP relationships?',
-  'What is required for beneficial ownership of companies?',
-  'Where do RBI and PMLA requirements conflict?',
+  'What is required to identify beneficial owners of companies?',
 ];
 UI.qa = [];
-function answerHtml(a, i){
-  if(!a) return `<div class="amsg"><span class="muted">${I.spin.replace('<svg', '<svg style="width:14px;height:14px;animation:spin 1s linear infinite;vertical-align:-2px"')} Retrieving clauses and verifying citations…</span></div>`;
-  if(a.error) return `<div class="amsg"><div class="callout crit">${I.warn}<div>${esc(a.error)}</div></div></div>`;
+const botMsg = (inner, isNew, foot = '') => `<div class="msg bot${isNew ? ' new' : ''}"><div class="avatar" aria-hidden="true">A</div>
+  <div class="body"><div class="bubble">${inner}</div>${foot}</div></div>`;
+function answerHtml(a, i, isNew){
+  if(!a) return botMsg(`<span class="typing" aria-label="Accentic is answering"><i></i><i></i><i></i></span>
+    <span class="muted" style="font-size:12px;margin-left:6px">Reading the regulations…</span>`, isNew);
+  if(a.error) return botMsg(`<div class="callout crit">${I.warn}<div>${esc(a.error)}</div></div>`, isNew);
   const nCites = a.answer.reduce((s, p) => s + p.citations.filter(c => c.kind === 'source').length, 0);
-  const body = a.answer.length ? a.answer.map((p, j) => `<p>${esc(p.text)}</p>
+  const intro = a.mode !== 'claude' && a.answer.length
+    ? (a.answer.length === 1
+        ? `<p>I found 1 requirement that answers this, quoted exactly from the regulation with where the bank stands:</p>`
+        : `<p>I found ${a.answer.length} requirements that answer this, each quoted exactly from the regulation with where the bank stands:</p>`) : '';
+  const body = a.answer.length ? intro + a.answer.map((p, j) => `<p>${esc(p.text)}</p>
       <div style="margin:-2px 0 10px">${p.citations.map((c, k) => c.kind === 'source'
         ? `<button class="cite" data-act="cite" data-id="q${i}-${j}-${k}" title="Verified: quote found at characters ${c.char_start}–${c.char_end}">${I.ok}${esc(c.ref)}</button>`
         : `<button class="cite f" data-ob="${c.obligation_id}" title="${esc(c.status)}">${I.list}Finding · ${esc(c.ref)}</button>`).join('')}</div>
       ${p.citations.map((c, k) => c.kind === 'source' ? `<div id="q${i}-${j}-${k}" style="display:none;margin:-4px 0 12px"><div class="src" style="max-height:160px"><mark>${esc(c.quote)}</mark></div>
         <div class="muted" style="font-size:11.5px;margin-top:4px">${esc(regShort(c.title, c.regulator))} · characters ${c.char_start}–${c.char_end} · re-located in the source before display</div></div>` : '').join('')}`).join('')
-    : `<p>No binding obligation in the ingested regulations addresses this. Accentic answers only from the documents it has read, so it does not guess.</p>`;
-  const meta = a.mode === 'claude'
-    ? `Answered by Claude Opus 5.5 · ${nCites} citation${nCites === 1 ? '' : 's'} verified against the source${a.rejected_citations ? ` · ${a.rejected_citations} unverifiable citation${a.rejected_citations > 1 ? 's' : ''} removed` : ''}${a.withheld_paragraphs ? ` · ${a.withheld_paragraphs} unsupported paragraph${a.withheld_paragraphs > 1 ? 's' : ''} withheld` : ''}`
-    : `Rule engine (no API key): matching obligations quoted verbatim with their current status · ${nCites} citations, true by construction`;
-  return `<div class="amsg">${body}<div style="border-top:1px solid var(--line);margin-top:6px;padding-top:8px;font-size:11.5px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-    <span class="chip ${a.mode === 'claude' ? 'accent' : 'neutral'}">${a.mode === 'claude' ? 'Claude' : 'Rule engine'}</span>${esc(meta)}
-    ${a.sources.length ? `<span>· searched ${a.sources.map(s => esc(s.ref)).join(', ')}</span>` : ''}</div></div>`;
+    : `<p>I couldn’t find a binding requirement in the regulations I’ve read that answers this. I only answer from those documents, so I won’t guess. Try asking about record keeping, reporting to FIU-IND, sanctions screening or due diligence.</p>`;
+  const extra = [a.rejected_citations ? `${a.rejected_citations} unverifiable citation${a.rejected_citations > 1 ? 's' : ''} removed` : '',
+                 a.withheld_paragraphs ? `${a.withheld_paragraphs} unsupported paragraph${a.withheld_paragraphs > 1 ? 's' : ''} withheld` : ''].filter(Boolean).join(' · ');
+  const foot = `<div class="msg-foot">
+      <span class="chip ${nCites ? 'good' : 'neutral'}">${nCites ? `${I.ok}${nCites} citation${nCites === 1 ? '' : 's'} verified` : 'No citations'}</span>
+      <span>${a.mode === 'claude' ? 'Claude Opus 5.5' : 'Rule engine (no API key)'}${extra ? ' · ' + esc(extra) : ''}</span>
+      ${a.sources.length ? `<details><summary>${a.sources.length} clauses searched</summary>${a.sources.map(s => esc(s.ref)).join(', ')}</details>` : ''}
+      ${a.answer.length ? `<button class="iconbtn" data-act="copyans" data-i="${i}" aria-label="Copy answer" title="Copy answer">${I.copy}</button>` : ''}
+    </div>`;
+  return botMsg(body, isNew, foot);
 }
-PAGES.ask = () => head('Ask Accentic',
-    'Ask about your obligations or your compliance position in plain English. Answers come only from the ingested regulations and this run’s findings. Every quoted citation is located word for word in the source before it is shown; one that cannot be found is removed, and a paragraph without verified support is withheld.')
-  + `<div class="qa" id="qaLog">${UI.qa.length ? UI.qa.map((x, i) => `<div class="qmsg">${esc(x.q)}</div>${answerHtml(x.a, i)}`).join('')
-      : `<section class="card"><div class="bd"><div class="muted" style="font-size:12.5px;margin-bottom:10px">Try one of these</div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">${QA_SUGGEST.map(q => `<button class="btn sm" data-act="askq" data-v="${esc(q)}">${esc(q)}</button>`).join('')}</div></div></section>`}</div>
-  <form class="qbar" id="qaForm"><textarea class="txt" id="qaIn" rows="1" placeholder="Ask a question about your regulatory obligations…" aria-label="Your question"></textarea>
-    <button class="btn primary" type="submit">${I.chat}Ask</button></form>`;
-AFTER.ask = () => {
+/* The assistant lives in a floating panel, outside #view, so it stays open across pages. */
+const CHAT = {open:false, built:false};
+function buildChat(){
+  const p = $('#chatPanel');
+  p.innerHTML = `<header class="chat-head"><div class="avatar" aria-hidden="true">A</div>
+      <div><b>Accentic</b><small>Compliance assistant · cites the exact source</small></div>
+      <div class="acts"><button class="newc" data-act="newchat" aria-label="New chat" title="New chat">${I.plus}</button>
+        <button data-act="chatclose" aria-label="Close" title="Close (Esc)">${I.x}</button></div></header>
+    <div class="chat-body" id="qaLog" aria-live="polite"></div>
+    <div class="composer"><form id="qaForm"><textarea id="qaIn" rows="1" placeholder="Message Accentic…" aria-label="Your question"></textarea>
+      <button class="send" id="qaSend" type="submit" aria-label="Send">${I.send}</button></form>
+      <div class="hint">Answers come only from the regulations Accentic has read</div></div>`;
   const inp = $('#qaIn');
+  const grow = () => { inp.style.height = 'auto'; inp.style.height = Math.min(inp.scrollHeight, 120) + 'px'; };
+  inp.oninput = grow;
   $('#qaForm').onsubmit = e => { e.preventDefault(); ask(inp.value); };
   inp.onkeydown = e => { if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); ask(inp.value); } };
-  inp.focus();
-  $('#view').scrollTop = $('#view').scrollHeight;
-};
+  CHAT.grow = grow;
+  CHAT.built = true;
+}
+function renderChat(){
+  if(!CHAT.built) return;
+  const last = UI.qa.length - 1;
+  $('#qaLog').innerHTML = UI.qa.length
+    ? UI.qa.map((x, i) => `<div class="msg user${i === last && !x.a ? ' new' : ''}"><div class="bubble">${esc(x.q)}</div></div>${answerHtml(x.a, i, i === last)}`).join('')
+    : `<div class="welcome"><div class="msg bot"><div class="avatar" aria-hidden="true">A</div><div class="bubble"><b>Hi, I’m Accentic.</b>Ask me about your obligations in plain English. I answer only from the regulations I’ve read, and every citation is checked against the source before you see it.</div></div>
+        <div class="suggest">${QA_SUGGEST.map(q => `<button data-act="askq" data-v="${esc(q)}">${esc(q)}${I.arrow}</button>`).join('')}</div></div>`;
+  $('#chatPanel').classList.toggle('has', UI.qa.length > 0);
+  $('#qaSend').disabled = !!UI.qaBusy;
+  $('#qaLog').scrollTop = $('#qaLog').scrollHeight;
+}
+function openChat(){
+  if(!CHAT.built) buildChat();
+  renderChat();
+  CHAT.open = true;
+  const p = $('#chatPanel'), fab = $('#chatFab');
+  p.classList.add('on'); p.setAttribute('aria-hidden', 'false');
+  fab.classList.add('open', 'seen'); fab.classList.remove('unread');
+  fab.setAttribute('aria-expanded', 'true'); $('#fabIco').innerHTML = I.x;
+  localStorage.setItem('accentic-chat-seen', '1');
+  setTimeout(() => $('#qaIn')?.focus(), 180);
+}
+function closeChat(){
+  CHAT.open = false;
+  const p = $('#chatPanel'), fab = $('#chatFab');
+  p.classList.remove('on'); p.setAttribute('aria-hidden', 'true');
+  fab.classList.remove('open'); fab.setAttribute('aria-expanded', 'false'); $('#fabIco').innerHTML = I.chat;
+}
+ACTIONS.chattoggle = () => CHAT.open ? closeChat() : openChat();
+ACTIONS.chatclose = () => { closeChat(); $('#chatFab').focus(); };
 async function ask(q){
   q = (q || '').trim();
-  if(q.length < 3) return;
+  if(q.length < 3 || UI.qaBusy) return;
   if(!hasData()){ toast('Run the analysis first so there is something to answer from.'); return; }
   const entry = {q, a:null};
-  UI.qa.push(entry); render(); $('#view').scrollTop = $('#view').scrollHeight;
+  UI.qa.push(entry); UI.qaBusy = true;
+  $('#qaIn').value = ''; CHAT.grow();
+  renderChat();
   try{ entry.a = await api('/api/ask', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({question:q})}); }
   catch(err){ entry.a = {error: err.message}; }
-  if(route() === 'ask'){ render(); $('#view').scrollTop = $('#view').scrollHeight; }
+  UI.qaBusy = false;
+  renderChat();
+  if(!CHAT.open) $('#chatFab').classList.add('unread');
 }
 ACTIONS.askq = t => ask(t.dataset.v);
+ACTIONS.newchat = () => { UI.qa = []; renderChat(); $('#qaIn').focus(); };
+ACTIONS.copyans = async t => {
+  const a = UI.qa[+t.dataset.i]?.a;
+  if(!a) return;
+  try{ await navigator.clipboard.writeText(a.answer.map(p => p.text).join('\n\n')); toast('Answer copied.'); }
+  catch{ toast('Copy is not available in this browser.'); }
+};
 ACTIONS.cite = t => { const el = document.getElementById(t.dataset.id); if(el) el.style.display = el.style.display === 'none' ? '' : 'none'; };
 AFTER.overview = () => {
   if(hasData() && !localStorage.getItem('accentic-tour-done') && TOURSTATE.i < 0)
@@ -1558,6 +1695,7 @@ PAGES.obligations = () => {
         <span class="count" id="obCount"></span></div><div id="obTable"></div></section>`;
 };
 AFTER.obligations = () => {
+  if(!hasData()) return;
   UI.refresh = () => {
     const rows = obligationRows();
     $('#obCount').textContent = `${rows.length} of ${S.obligations.length}`;
@@ -1824,6 +1962,7 @@ PAGES.gaps = () => {
         <span class="count" id="gapCount"></span></div><div id="gapTable"></div></section>`;
 };
 AFTER.gaps = () => {
+  if(!hasData()) return;
   UI.refresh = () => {
     const rows = gapRows();
     $('#gapCount').textContent = `${rows.length} of ${S.gaps.length}`;
@@ -1900,6 +2039,7 @@ PAGES.remediation = () => {
         <span class="count" id="remCount"></span></div><div id="remBody" style="padding:${view === 'board' ? '14px' : '0'}"></div></section>`;
 };
 AFTER.remediation = () => {
+  if(!hasData()) return;
   UI.refresh = () => {
     const rows = remRows(), view = fval('rem', 'view', 'board');
     $('#remCount').textContent = `${rows.length} of ${S.gaps.length} tasks`;
@@ -2398,6 +2538,7 @@ function remember(o){
 function paletteIndex(){
   const items = [];
   ALL_SECTIONS.forEach(sec => sec.pages.forEach(([id, label]) => items.push({k:'Page', t:`${sec.label} › ${label}`, s:PAGE_HELP[id], go:id})));
+  items.push({k:'Assistant', t:'Ask Accentic', s:'Plain-English answers with verified citations', go:'ask'});
   items.push({k:'Help', t:'How to use Accentic', s:'Sections explained, glossary of terms, shortcuts', help:true});
   items.push({k:'Action', t:'Run the analysis', s:'Re-assess every regulation and control', run:true});
   items.push({k:'Action', t:'Open the board report', s:'Print, save as PDF or download Word', url:'/api/report'});
@@ -2449,12 +2590,12 @@ function choosePalette(x){
    Guided tour: the demo story, in eight stops
    ===================================================================== */
 const TOUR = [
-  {r:'overview', sel:'#nav', t:'Six places, each answering one question', b:'Issues & actions: what is wrong and who is fixing it. Regulations: what the rules require. Our controls: how well we meet them. Monitoring & proof: alerts and evidence. Pages inside each place appear as tabs at the top.'},
+  {r:'overview', sel:'#nav', t:'Five places, each answering one question', b:'Issues & actions: what is wrong and who is fixing it. Regulations: what the rules require. Our controls: how well we meet them. Monitoring & proof: alerts and evidence. Pages inside each place appear as tabs at the top.'},
   {r:'overview', sel:'.callout', t:'The verdict first', b:'One line tells you whether the bank is inside its risk appetite, and where to go next. The Help button explains every term you will see.'},
   {r:'overview', sel:'.kpis', t:'Four numbers that matter', b:'Coverage, open gaps, failing controls and how much is proven from source, all from the latest run. Every number links to the register behind it.'},
   {r:'overview', sel:'.flow', t:'The chain the problem defines', b:'Regulations → obligations → applicability → controls → evidence → testing → gaps → remediation → monitoring. Hover a step to see the agent that owns it.'},
   {r:'overview', sel:'.finding', t:'Findings you can prove', b:'Select any finding to open its full traceability chain, from the exact clause text through to the remediation task.'},
-  {r:'ask', sel:'#qaForm', t:'Ask in plain English', b:'Answers come only from the ingested regulations. Each citation is located word for word in the source before it is shown.'},
+  {r:'overview', sel:'#chatFab', t:'Ask in plain English, from any page', b:'The chat button opens Accentic’s assistant. Answers come only from the ingested regulations, and each citation is located word for word in the source before it is shown.'},
   {r:'verify', sel:'#claim', t:'Try to break it', b:'Paste a real sentence and it resolves to its clause and offsets. Change one number and it is rejected. This is the same gate the pipeline uses.'},
   {r:'controls', sel:'.callout.crit', t:'The owner says effective. The evidence disagrees.', b:'Control tests are re-performed from the evidence, so a self-assessed “Effective” cannot hide a breached deadline.'},
   {r:'remediation', sel:'.board', t:'Remediation that closes only when verified', b:'Drag tasks between columns. A task marked done is re-opened automatically if the next run still detects the gap.'},
@@ -2520,6 +2661,8 @@ ACTIONS.tourend = () => endTour();
   $('#kIco').innerHTML = I.search; $('#pIco').innerHTML = I.search;
   $('#tourBtn').innerHTML = I.compass; $('#reportBtn').innerHTML = I.report;
   $('#helpBtn').innerHTML = I.help; $('#helpIco2').innerHTML = I.help;
+  $('#fabIco').innerHTML = I.chat;
+  if(localStorage.getItem('accentic-chat-seen')) $('#chatFab').classList.add('seen');
   const setNav = min => {
     document.documentElement.classList.toggle('navmin', min);
     localStorage.setItem('accentic-navmin', min ? '1' : '');
