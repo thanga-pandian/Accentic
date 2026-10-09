@@ -3,9 +3,9 @@ PDF sectioner: reads an RBI PDF and stores one regulation row + many reg_section
 Every char_start/char_end is an exact position into regulation.full_text.
 
 Usage:
-    python -m extract.sectioner data/regulations/rbi-kyc.pdf
-    python -m extract.sectioner data/regulations/rbi-kyc.pdf --dry-run
-    python -m extract.sectioner data/regulations/rbi-kyc-extract.txt   # fallback txt
+    python -m extract.sectioner data/regulations/rbi-commercial-banks-kyc-directions-2025.pdf
+    python -m extract.sectioner data/regulations/rbi-commercial-banks-kyc-directions-2025.pdf --dry-run
+    python -m extract.sectioner path/to/regulation.txt   # plain-text fallback
 """
 
 import argparse
@@ -17,31 +17,58 @@ from pathlib import Path
 
 from db.connection import get_connection
 
+# Official texts mark inserted or substituted provisions with a leading "[", as in
+# "[8. Furnishing of information" or "[(bb) ...". Rule numbers may carry a letter
+# ("3A."). A single-level number needs its dot so a wrapped "15 days" is not clause 15.
+CLAUSE_NUMBER = r"(\d{1,3}(?:-?[A-Z])?(?:\.\d{1,3})+|\d{1,3}(?:-?[A-Z])?(?=\.))\.?\s"
+NUMBERED_LINE = r"(?m)^\[?[ \t]*" + CLAUSE_NUMBER
+
+
+def major(number: str) -> int:
+    """'9-B' -> 9, '38.3' -> 38."""
+    return int(re.match(r"\d+", number).group())
+
+
+def advancing(marks, number):
+    """
+    Paragraph numbers only advance through a document, so a lower one ("1. 'Control'
+    means..." inside rule 9, or an annex list restarting at 1) is an item inside the
+    current clause, not a new clause. `number(m)` is None for non-numeric marks.
+    """
+    out, current = [], 0
+    for m in marks:
+        n = number(m)
+        if n is not None:
+            if major(n) < current:
+                continue
+            current = major(n)
+        out.append(m)
+    return out
+
 # ---------------------------------------------------------------------------
 # Clause-split regex: matches at the start of a line
 # Groups covered:
-#   - "38."  "38.3."  "38.3.1."   (numeric dot sequences)
-#   - "(a)"  "(i)"   "(iv)"       (lettered/roman sub-clauses)
-#   - "Chapter IV"  "Chapter 4"
-#   - "Section 3"   "Section III"
+#   - "38."  "38.3."  "3A."  "[8."      (numeric dot sequences)
+#   - "(a)"  "(iv)"  "(1)"  "[(bb)"     (lettered, roman and numbered sub-clauses)
+#   - "Chapter IV – Title"  "Section 3" (only as headings, not "Section 2 of the Act")
 # ---------------------------------------------------------------------------
 _CLAUSE_RE = re.compile(
-    r"""(?m)^                               # start of line
+    r"""(?m)^\[?[ \t]*                      # start of line, optional amendment bracket
     (?:
-        (?P<num>                            # numeric  e.g. 38.  or 38.3.
-            \d{1,3}(?:\.\d{1,3})*\.        # at least one dot-terminated segment
+        (?P<num>                            # numeric  e.g. 38.  38.3.  3A.  9-B.
+            \d{1,3}(?:-?[A-Z])?(?:\.\d{1,3})*\.
         )
         |
-        (?P<sub>                            # sub-clause  e.g. (a)  (iv)
-            \([a-z]{1,4}\)
+        (?P<sub>                            # sub-clause  e.g. (a)  (iv)  (1)
+            \((?:[a-z]{1,4}|\d{1,2}[A-Z]?)[)\]]
         )
         |
-        (?P<chapter>                        # Chapter heading
-            Chapter\s+[IVXLCDM\d]+
+        (?P<chapter>                        # Chapter heading, not "Chapter IV of the Act"
+            Chapter\s+[IVXLCDM\d]+(?=[ \t]*(?:$|[-–—:.](?:\s|$)))
         )
         |
-        (?P<section>                        # Section heading
-            Section\s+[IVXLCDM\d]+
+        (?P<section>                        # Section heading, not "Section 11-A and ..."
+            Section\s+[IVXLCDM\d]+(?=[ \t]*(?:$|[-–—:.](?:\s|$)))
         )
     )
     """,
@@ -96,7 +123,7 @@ def _split_sections(
     Split full_text on _CLAUSE_RE boundaries.
     Returns list of dicts with clause_path, char_start, char_end, raw_text, page_no.
     """
-    matches = list(_CLAUSE_RE.finditer(full_text))
+    matches = advancing(_CLAUSE_RE.finditer(full_text), lambda m: m.group("num"))
     sections: list[dict] = []
 
     for idx, m in enumerate(matches):
@@ -112,7 +139,7 @@ def _split_sections(
             or m.group("chapter")
             or m.group("section")
             or m.group(0)
-        ).strip()
+        ).strip().replace("]", ")")
 
         page_no = _page_for_offset(char_start, page_offsets)
 
@@ -129,40 +156,65 @@ def _split_sections(
     return sections
 
 
-def _document_identity(full_text: str, source_path: Path) -> tuple[str, str]:
-    """
-    Read the issuing body and title off the document head rather than the
-    filename, so the UI shows 'RBI · Master Direction — KYC' not 'rbi-kyc-extract'.
-    """
-    lines = [ln.strip() for ln in full_text.split("\n")[:6] if ln.strip()]
-    regulator = "RBI"
-    for line in lines[:2]:
-        if re.search(r"reserve bank", line, re.I):
-            regulator = "RBI"
-            break
-        if re.search(r"government of india|ministry|department", line, re.I):
-            regulator = "GoI"
-            break
+# "The Prevention of Money-Laundering (Maintenance of Records) Rules, 2005¹" -> the
+# title up to its year, dropping a leading "The" and any footnote digit after it.
+# No digits before the year: that is what separates a title from a gazette masthead
+# ("No. 472] NEW DELHI, ... 2005") or a circular reference number.
+_TITLE_RE = re.compile(
+    r"^(?:The\s+)?([^\d]{10,160}?\b(?:Directions?|Rules|Regulations|Act|Circular|Guidelines),?\s+\d{4})",
+    re.I,
+)
+_VERSION_RE = re.compile(r"Updated as on ([A-Z][a-z]+\.? \d{1,2}, \d{4})")
 
-    title = next(
-        (ln for ln in lines[1:4]
-         if len(ln) > 18 and re.search(r"direction|rule|regulation|act|circular|guideline", ln, re.I)),
-        None,
-    )
-    return regulator, (title or source_path.stem)
+
+def _document_identity(full_text: str, source_path: Path) -> tuple[str, str, str | None]:
+    """
+    Read the issuing body, title and version off the document head rather than the
+    filename. Gazette PDFs open with masthead lines, so the head is scanned, not
+    just the first line.
+    """
+    lines = [ln.strip() for ln in full_text.split("\n")[:60] if ln.strip()]
+    # A long title wraps ("...Directions,\n2025"), so each line is read with the next.
+    pairs = [" ".join(lines[i:i + 2]) for i in range(len(lines))]
+    title_match = next((m for m in map(_TITLE_RE.search, pairs) if m), None)
+    title = title_match.group(1) if title_match else source_path.stem
+    head = "\n".join(lines[:15])
+
+    if re.search(r"reserve bank", title, re.I) or any(
+            re.fullmatch(r"reserve bank of india", ln, re.I) for ln in lines[:3]):
+        regulator = "RBI"
+    elif re.search(r"government of india|ministry|gazette|extraordinary", head, re.I):
+        regulator = "GoI"
+    else:
+        regulator = "RBI"
+
+    version = _VERSION_RE.search("\n".join(lines[:30]))
+    return regulator, title, (f"Updated as on {version.group(1)}" if version else None)
+
+
+def official_source(source_path: Path) -> dict:
+    """Where this file came from, per the sources.json manifest beside it."""
+    manifest = source_path.parent / "sources.json"
+    if not manifest.exists():
+        return {}
+    return json.loads(manifest.read_text(encoding="utf-8")).get(source_path.name, {})
 
 
 def _insert_regulation(conn, source_path: Path, full_text: str) -> str:
     reg_id = str(uuid.uuid4())
-    regulator, title = _document_identity(full_text, source_path)
+    regulator, title, version = _document_identity(full_text, source_path)
+    origin = official_source(source_path)
     with conn.cursor() as cur:
         cur.execute(
             """
             INSERT INTO regulation
-                (id, regulator, jurisdiction, title, version, source_url, full_text)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+                (id, regulator, jurisdiction, title, version, source_url, full_text,
+                 official_url, retrieved_on)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             """,
-            (reg_id, regulator, "India", title, None, str(source_path), full_text),
+            (reg_id, regulator, "India", title, origin.get("version") or version,
+             str(source_path), full_text, origin.get("official_url"),
+             origin.get("retrieved_on")),
         )
     return reg_id
 
@@ -203,11 +255,14 @@ def _insert_needs_review(conn, stage: str, payload: dict, reason: str) -> None:
         )
 
 
-def run(source_path: Path, dry_run: bool = False, conn=None) -> None:
+def read_source(source_path: Path) -> tuple[str, list[tuple[int, int]]]:
     if source_path.suffix.lower() == ".txt":
-        full_text, page_offsets = _extract_text_from_txt(source_path)
-    else:
-        full_text, page_offsets = _extract_text_from_pdf(source_path)
+        return _extract_text_from_txt(source_path)
+    return _extract_text_from_pdf(source_path)
+
+
+def run(source_path: Path, dry_run: bool = False, conn=None) -> None:
+    full_text, page_offsets = read_source(source_path)
 
     sections = _split_sections(full_text, page_offsets)
 

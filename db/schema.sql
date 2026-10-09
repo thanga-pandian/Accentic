@@ -16,8 +16,12 @@ CREATE TABLE IF NOT EXISTS regulation (
     effective_from  DATE,
     source_url      TEXT,
     full_text       TEXT NOT NULL,
-    ingested_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+    ingested_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    official_url    TEXT,
+    retrieved_on    DATE
 );
+ALTER TABLE regulation ADD COLUMN IF NOT EXISTS official_url TEXT;
+ALTER TABLE regulation ADD COLUMN IF NOT EXISTS retrieved_on DATE;
 
 CREATE TABLE IF NOT EXISTS reg_section (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -287,3 +291,28 @@ CREATE TABLE IF NOT EXISTS kri_snapshot (
     alerts          INTEGER NOT NULL DEFAULT 0,
     captured_at     TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Official sanctions data. Owned by the sync, not the pipeline: never reset per run.
+CREATE TABLE IF NOT EXISTS sanctions_snapshot (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    source_url      TEXT NOT NULL,
+    date_generated  TEXT NOT NULL,
+    retrieved_at    TIMESTAMPTZ NOT NULL,
+    sha256          TEXT NOT NULL,
+    individuals     INTEGER NOT NULL DEFAULT 0,
+    entities        INTEGER NOT NULL DEFAULT 0,
+    added           INTEGER NOT NULL DEFAULT 0,
+    removed         INTEGER NOT NULL DEFAULT 0,
+    changes         TEXT
+);
+
+CREATE TABLE IF NOT EXISTS sanctions_entry (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    reference_number TEXT NOT NULL,
+    kind             TEXT NOT NULL,
+    name             TEXT NOT NULL,
+    list_type        TEXT NOT NULL,
+    listed_on        TEXT,
+    aliases          TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_sanctions_entry_list ON sanctions_entry (list_type);

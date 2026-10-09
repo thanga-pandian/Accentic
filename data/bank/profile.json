@@ -8,7 +8,14 @@
   "jurisdictions": [
     "India"
   ],
-  "assessment_date": "2025-12-15",
+  "assessment_date": "2026-10-09",
+  "assessment_scope": {
+    "label": "Thematic review: risk management, beneficial ownership, ongoing and enhanced due diligence, record keeping, FIU-IND reporting and sanctions screening",
+    "paragraphs": {
+      "RBI": "20, 38-46, 50-62",
+      "GoI": "3-5, 7-8, 10"
+    }
+  },
   "business_units": {
     "Retail Banking": "individual customers, savings and current accounts",
     "Corporate Banking": "companies, legal entities and beneficial owners",

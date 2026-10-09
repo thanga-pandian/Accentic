@@ -193,6 +193,63 @@ def clause_ref_recovers_sub_clause_path():
     assert clause_ref(text, text.index("REs")) == "13.1"
 
 
+@test
+def clause_ref_reads_gazette_numbering():
+    # Official text: amendment brackets, sub-rules, lettered rules and a numbered
+    # explanation inside a rule that must not be read as rule 1 and 2.
+    text = ("[8. Furnishing of information.—(1) The Principal Officer shall furnish monthly.\n"
+            "[(2) The principal officer shall furnish suspicious transactions promptly.\n"
+            "[9. Client Due Diligence.—\n(1) Every reporting entity shall identify clients.\n"
+            "Explanation.—\n1. “Control” means the right to appoint directors.\n"
+            "(3) Where the client is a trust, the entity shall verify trustees.\n"
+            "[9-B. Inspection.—(1) The Reserve Bank may call for records.\n")
+    refs = {k: clause_ref(text, text.index(k)) for k in ("promptly", "verify trustees", "call for")}
+    assert refs == {"promptly": "8(2)", "verify trustees": "9(3)", "call for": "9-B"}, refs
+
+
+@test
+def wrapped_words_are_not_clause_numbers():
+    text = "5. The bank shall keep records for\n10 years from the date of transaction.\n"
+    assert clause_ref(text, text.index("years")) == "5", clause_ref(text, text.index("years"))
+
+
+@test
+def assessment_scope_follows_paragraph_ranges():
+    from agents.applicability import in_review
+    profile = {"assessment_scope": {"paragraphs": {"RBI": "20, 38-46, 50-62", "GoI": "3-5, 10"}}}
+    assert in_review("58", "RBI", profile) and in_review("44(2)(b)", "RBI", profile)
+    assert not in_review("23(6)", "RBI", profile) and not in_review("", "RBI", profile)
+    assert in_review("3A(2)", "GoI", profile), "a range takes its lettered inserts"
+    assert not in_review("9-A", "GoI", profile)
+    assert in_review("7", "SEBI", profile), "a regulator with no entry is reviewed in full"
+    status, reason, _ = assess("The bank shall do x.", "must", "RBI", "India",
+                               {**PROFILE, **profile}, reviewed=False)
+    assert status == "not_assessed" and "20, 38-46, 50-62" in reason, (status, reason)
+
+
+@test
+def list_limbs_inherit_the_lead_in_duty():
+    from agents.obligations import _rule_extract
+    lead = "50. The bank shall take the following steps regarding maintenance, preservation"
+    duty = _rule_extract("(1) maintain all necessary records of transactions for at least five years;", lead)
+    item = _rule_extract("(i) the nature of the transactions and the currency in which it was denominated;", lead)
+    assert [d["modality"] for d in duty] == ["must"], duty
+    assert item == [], item
+
+
+@test
+def repagination_is_not_a_regulatory_change():
+    from agents.impact import ChangeAgent
+    prior = ("11. The bank shall have Board-approved policies in this\nregard.\n"
+             "14. The bank shall report to the FIU-IND.\n18\n\n"
+             "15. Principal Officer shall be designated.\n")
+    current = ("11. The bank shall have policies approved by the Board or committee of the Board.\n"
+               "14. The bank shall report to the\nFIU-IND.\n2\nSubstituted w.e.f. October 1, 2026 "
+               "vide Amendment Directions, 2026\n18\n\n15. Principal Officer shall be designated.\n")
+    changed = [c["clause_path"] for c in ChangeAgent("t")._diff_clauses(prior, current)]
+    assert changed == ["11"], changed
+
+
 # ---------------------------------------------------------------------------
 # contradiction direction
 # ---------------------------------------------------------------------------
@@ -223,6 +280,15 @@ def different_record_classes_do_not_conflict():
     c = _conflict("retention", "Records of transactions shall be maintained for ten years.",
                   "Records of the identity of clients shall be maintained for five years.")
     assert c is None, c
+
+
+@test
+def a_regulation_does_not_contradict_itself():
+    agent = ContradictionAgent("t")
+    a = ("a", "41(1)", "The bank shall review risk categorisation periodically.", "must", "RBI KYC", "r1")
+    b = ("b", "42(3)", "The bank shall not insist on fresh documents at periodic review.", "must_not",
+         "RBI KYC", "r1")
+    assert agent._compare("periodic_review", a, b) is None
 
 
 # ---------------------------------------------------------------------------
@@ -258,8 +324,7 @@ def drift_detects_a_modified_source():
 # trainability, self-assurance, AI remediation drafting (end to end on the corpus)
 # ---------------------------------------------------------------------------
 
-def _fresh_run():
-    from agents.orchestrator import run_pipeline
+def _apply_schema():
     conn = get_connection()
     with conn.cursor() as cur:
         for stmt in (Path(__file__).parent.parent / "db" / "sqlite_schema.sql") \
@@ -268,32 +333,93 @@ def _fresh_run():
                 cur.execute(stmt)
     conn.commit()
     conn.close()
+
+
+def _fresh_run():
+    from agents.orchestrator import run_pipeline
+    _apply_schema()
     return run_pipeline()
+
+
+def _un_list(entries):
+    body = "".join(
+        f"<INDIVIDUAL><FIRST_NAME>{name}</FIRST_NAME><UN_LIST_TYPE>{kind}</UN_LIST_TYPE>"
+        f"<REFERENCE_NUMBER>{ref}</REFERENCE_NUMBER><LISTED_ON>2020-01-01</LISTED_ON>"
+        f"<INDIVIDUAL_ALIAS><ALIAS_NAME>{name} ALIAS</ALIAS_NAME></INDIVIDUAL_ALIAS></INDIVIDUAL>"
+        for ref, name, kind in entries)
+    entity = ("<ENTITY><FIRST_NAME>DELTA TRADING</FIRST_NAME><UN_LIST_TYPE>DPRK</UN_LIST_TYPE>"
+              "<REFERENCE_NUMBER>KPe.004</REFERENCE_NUMBER><LISTED_ON>2020-01-01</LISTED_ON></ENTITY>")
+    return (f'<?xml version="1.0"?><CONSOLIDATED_LIST dateGenerated="2026-10-08T23:00:00Z">'
+            f"<INDIVIDUALS>{body}</INDIVIDUALS><ENTITIES>{entity}</ENTITIES></CONSOLIDATED_LIST>").encode()
+
+
+@test
+def sanctions_sync_names_added_and_removed_designations():
+    from agents import sanctions
+    _apply_schema()
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM sanctions_entry")
+            cur.execute("DELETE FROM sanctions_snapshot")
+        conn.commit()
+        first = sanctions.sync(conn, _un_list([("KPi.001", "ALPHA ONE", "DPRK"),
+                                               ("QDi.002", "BRAVO TWO", "Al-Qaida")]))
+        second = sanctions.sync(conn, _un_list([("KPi.001", "ALPHA ONE", "DPRK"),
+                                                ("TAi.003", "CHARLIE THREE", "Taliban")]))
+        listed = sanctions.status(conn)
+    finally:
+        conn.close()
+    assert first["first_sync"] and first["added"] == 0, first
+    assert (second["added"], second["removed"]) == (1, 1), second
+    assert listed["changes"]["added"][0]["name"] == "CHARLIE THREE", listed["changes"]
+    assert listed["changes"]["removed"][0]["ref"] == "QDi.002", listed["changes"]
+    paras = {r["list"]: (r["rbi_para"], r["individuals"], r["entities"]) for r in listed["regimes"]}
+    assert paras == {"UNSCR 1718 Sanctions List": ("58", 1, 1),
+                     "Taliban Sanctions List": ("56(1)(ii)", 1, 0)}, paras
+    assert not listed["stale"]
+
+
+@test
+def sanctions_sync_rejects_a_feed_that_is_not_the_un_list():
+    from agents import sanctions
+    for bad in (b"<html><body>Access denied</body></html>", b"not xml at all"):
+        try:
+            sanctions.parse(bad)
+        except ValueError:
+            continue
+        raise AssertionError(f"accepted {bad!r}")
 
 
 @test
 def reviewer_decisions_override_and_teach():
     from agents import feedback
+    # PMLA rule 10(1): keep the physical record of client identity. RBI 20(2): a
+    # permissive "may" the system calls informational.
+    identity_rule = """SELECT o.obligation_text, o.clause_ref, r.regulator, c.control_ref,
+                              m.reviewed, m.rationale
+                       FROM obligation o JOIN regulation r ON r.id = o.regulation_id
+                       JOIN mapping m ON m.obligation_id = o.id JOIN control c ON c.id = m.control_id
+                       WHERE r.regulator = 'GoI' AND o.clause_ref = '10(1)'"""
+    permissive = """SELECT o.obligation_text, o.clause_ref, r.regulator, o.applicability,
+                           o.applicability_reviewed
+                    FROM obligation o JOIN regulation r ON r.id = o.regulation_id
+                    WHERE r.regulator = 'RBI' AND o.clause_ref = '20(2)' ORDER BY o.char_start"""
     _fresh_run()
     conn = get_connection()
     try:
         with conn.cursor() as cur:
-            cur.execute("""SELECT o.id, o.obligation_text, COALESCE(o.clause_ref, o.clause_path),
-                                  r.regulator, c.control_ref
-                           FROM obligation o JOIN regulation r ON r.id = o.regulation_id
-                           JOIN mapping m ON m.obligation_id = o.id JOIN control c ON c.id = m.control_id
-                           WHERE o.clause_ref = '6'""")
-            ob_id, text, ref, regulator, current = cur.fetchone()
-            cur.execute("""SELECT o.id, o.obligation_text, COALESCE(o.clause_ref, o.clause_path), r.regulator
-                           FROM obligation o JOIN regulation r ON r.id = o.regulation_id
-                           WHERE o.clause_ref = '1'""")
-            title_row = cur.fetchone()
+            cur.execute(identity_rule)
+            text, ref, regulator, current = cur.fetchone()[:4]
+            cur.execute(permissive)
+            may_row = cur.fetchone()
         assert current == "CTRL-REC-030", current
+        assert may_row[3] == "informational", may_row
         feedback.record(conn, target="mapping", regulator=regulator, clause_ref=ref, text=text,
                         system_value=current, decided_value="CTRL-KYC-001",
                         note="identity records sit with onboarding", reviewer="Test Reviewer")
-        feedback.record(conn, target="applicability", regulator=title_row[3], clause_ref=title_row[2],
-                        text=title_row[1], system_value="informational", decided_value="applicable",
+        feedback.record(conn, target="applicability", regulator=may_row[2], clause_ref=may_row[1],
+                        text=may_row[0], system_value="informational", decided_value="applicable",
                         note="", reviewer="Test Reviewer")
     finally:
         conn.close()
@@ -302,12 +428,10 @@ def reviewer_decisions_override_and_teach():
     conn = get_connection()
     try:
         with conn.cursor() as cur:
-            cur.execute("""SELECT c.control_ref, m.reviewed, m.rationale FROM obligation o
-                           JOIN mapping m ON m.obligation_id = o.id JOIN control c ON c.id = m.control_id
-                           WHERE o.clause_ref = '6'""")
-            ref_now, reviewed, rationale = cur.fetchone()
-            cur.execute("SELECT applicability, applicability_reviewed FROM obligation WHERE clause_ref = '1'")
-            app_now = cur.fetchone()
+            cur.execute(identity_rule)
+            ref_now, reviewed, rationale = cur.fetchone()[3:]
+            cur.execute(permissive)
+            app_now = cur.fetchone()[3:]
             cur.execute("SELECT output_summary FROM agent_run WHERE agent_name = 'MappingAgent'")
             summary = cur.fetchone()[0]
     finally:
@@ -404,15 +528,15 @@ def qa_strips_unverifiable_citations():
 
     def fake(system, prompt, **_):
         import re
-        # Cite whichever retrieved source really contains the deadline.
+        # Cite whichever retrieved source really holds PMLA rule 8(2).
         block = next(b for b in re.split(r"\n\n(?=\[S\d+\])", prompt.split("SOURCES:\n", 1)[1])
-                     if "reported within 7 days" in b)
+                     if "furnish the information promptly" in b)
         sid = re.match(r"\[(S\d+)\]", block).group(1)
         return {"answer": [
-            {"text": "STRs must be filed within 7 days.",
-             "citations": [{"source": sid, "quote": "to be reported within 7 days"}]},
-            {"text": "STRs must be filed within 2 days.",                       # fabricated
-             "citations": [{"source": sid, "quote": "to be reported within 2 days"}]},
+            {"text": "STRs must be furnished promptly.",
+             "citations": [{"source": sid, "quote": "furnish the information promptly"}]},
+            {"text": "STRs must be furnished within 2 days.",                   # fabricated
+             "citations": [{"source": sid, "quote": "furnish the information within 2 days"}]},
             {"text": "An invented source.", "citations": [{"source": "S99", "quote": "x"}]},
         ]}
     llm.complete_json = fake
@@ -423,10 +547,10 @@ def qa_strips_unverifiable_citations():
         conn.close()
     texts = [p["text"] for p in result["answer"]]
     assert result["mode"] == "claude", result["mode"]
-    assert texts == ["STRs must be filed within 7 days."], texts
+    assert texts == ["STRs must be furnished promptly."], texts
     assert result["rejected_citations"] == 2 and result["withheld_paragraphs"] == 2, result
     cite = result["answer"][0]["citations"][0]
-    assert cite["quote"] == "to be reported within 7 days", cite
+    assert cite["quote"] == "furnish the information promptly", cite
 
 
 @test

@@ -12,6 +12,7 @@ from pathlib import Path
 
 from agents import llm
 from agents.base import Agent, VerificationError, anchor, clause_ref
+from extract.sectioner import NUMBERED_LINE
 
 # The prompt lives in prompts/ so it can be reviewed and tuned without touching
 # code. Behaviour it asks for is still enforced here, never trusted.
@@ -40,9 +41,11 @@ _CATEGORIES = [
     (r"enhanced due diligence|edd\b|politically exposed|pep\b", "edd"),
     (r"risk categor|low risk|medium risk|high risk|risk profile|risk-based approach",
      "risk_rating"),
+    # Before CDD: "verify every day, the UNSCR 1718 Sanctions List" is screening.
+    (r"sanction|screen|watch ?list|fatf|\bunscr?\b|\buapa\b|terroris|designated (?:individuals|"
+     r"persons|list)|freez", "screening"),
     (r"due diligence|cdd\b|identif|verif|officially valid", "cdd"),
     (r"principal officer|designated director|senior management|board", "governance"),
-    (r"sanction|screen|watch ?list|fatf", "screening"),
 ]
 
 _DEADLINE = re.compile(
@@ -63,23 +66,41 @@ def _categorise(text: str) -> str:
 
 def _parent_lead(full_text: str, start: int) -> str:
     """The lead-in line of the numbered clause that a lettered limb belongs to."""
-    head = full_text[max(0, start - 900):start]
-    marks = list(re.finditer(r"(?m)^\d{1,3}(?:\.\d{1,3})*\.?\s", head))
+    head = full_text[max(0, start - 4000):start]
+    marks = list(re.finditer(NUMBERED_LINE, head))
     return head[marks[-1].start():].split("\n", 1)[0] if marks else ""
 
 
+# "The bank shall, (1) maintain all necessary records ..." - the limb carries the duty
+# without its own "shall". A limb that opens on a verb inherits it; one that opens on
+# a noun phrase ("(i) the nature of the transactions") is an item in a list, not a duty.
+_NOT_VERBS = {"the", "a", "an", "any", "all", "such", "its", "their", "his", "her", "in", "of",
+              "on", "for", "where", "when", "if", "to", "by", "with", "from", "and", "or",
+              "that", "this", "these", "those", "each", "every", "no", "not", "whether",
+              "other", "at", "as", "under", "after", "before", "within", "who", "which"}
+
+
+def _opens_on_verb(sentence: str) -> bool:
+    m = re.match(r"\W*(?:\((?:\w{1,4})[)\]]\s*)+([a-z]+)\b", sentence)
+    return bool(m) and m.group(1) not in _NOT_VERBS
+
+
 def _sentences(text: str) -> list[str]:
-    parts = re.split(r"(?<=[.;:])\s+(?=[A-Z(])|\n(?=\([a-z]+\)|\(i+v?\)|\d+\.)", text)
+    parts = re.split(r"(?<=[.;:])\s+(?=[A-Z(\[])|\n(?=\[?\((?:[a-z]+|\d{1,2})[)\]]|\[?\d+[A-Z]?\.)", text)
     return [p.strip() for p in parts if len(p.strip()) > 40]
 
 
-def _rule_extract(section_text: str) -> list[dict]:
+def _modality(text: str) -> str | None:
+    return next((m for pattern, m in _MODALS if re.search(pattern, text, re.I)), None)
+
+
+def _rule_extract(section_text: str, lead: str = "") -> list[dict]:
     """Modal-verb obligation detection. Genuine NLP, not a stub."""
+    inherited = _modality(lead) if lead else None
     found = []
     for sentence in _sentences(section_text):
-        modality = next(
-            (m for pattern, m in _MODALS if re.search(pattern, sentence, re.I)), None
-        )
+        modality = _modality(sentence) or (
+            inherited if inherited in ("must", "must_not") and _opens_on_verb(sentence) else None)
         if not modality:
             continue
 
@@ -101,7 +122,7 @@ def _rule_extract(section_text: str) -> list[dict]:
             "quote": sentence,
             "actor": actor_match.group(0) if actor_match else "Regulated Entity",
             "modality": modality,
-            "action": re.sub(r"^\W*(?:\(\w+\)|\d+(?:\.\d+)*\.?)\s*", "", sentence)[:220],
+            "action": re.sub(r"^\W*(?:\(\w+[)\]]|\d+[A-Z]?(?:\.\d+)*\.?)\s*", "", sentence)[:220],
             "condition": condition_match.group(0).strip() if condition_match else None,
             "deadline": deadline_match.group(0) if deadline_match else None,
             "risk_tier": risk,
@@ -136,7 +157,8 @@ class ObligationAgent(Agent):
             if len(raw_text.strip()) < 60:
                 continue
 
-            candidates, source = self._candidates(clause_path, raw_text)
+            lead = _parent_lead(full_text, sec_start) if clause_path.startswith("(") else ""
+            candidates, source = self._candidates(clause_path, raw_text, lead)
             if not candidates:
                 continue
 
@@ -146,7 +168,7 @@ class ObligationAgent(Agent):
                 except VerificationError:
                     # Model hallucinated a quote. Retry once against the rule
                     # engine, which can only ever return real substrings.
-                    retry = self._retry(cand, raw_text, sec_start)
+                    retry = self._retry(cand, raw_text, sec_start, lead)
                     if retry is None:
                         self.quarantine(
                             conn,
@@ -209,17 +231,17 @@ class ObligationAgent(Agent):
             "mode": llm.mode(),
         }}
 
-    def _candidates(self, clause_path: str, raw_text: str) -> tuple[list[dict], str]:
+    def _candidates(self, clause_path: str, raw_text: str, lead: str = "") -> tuple[list[dict], str]:
         result = llm.complete_json(
             SYSTEM, f"Clause {clause_path}:\n\n{raw_text}", max_tokens=4000
         )
         if isinstance(result, list) and result:
             return [c for c in result if isinstance(c, dict) and c.get("quote")], "claude"
-        return _rule_extract(raw_text), "rule_engine"
+        return _rule_extract(raw_text, lead), "rule_engine"
 
-    def _retry(self, cand: dict, raw_text: str, sec_start: int):
+    def _retry(self, cand: dict, raw_text: str, sec_start: int, lead: str = ""):
         """Recovery path: re-derive the obligation from text we know is real."""
-        for fallback in _rule_extract(raw_text):
+        for fallback in _rule_extract(raw_text, lead):
             try:
                 span = anchor(fallback["quote"], raw_text, sec_start)
             except VerificationError:

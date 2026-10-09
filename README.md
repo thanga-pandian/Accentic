@@ -26,10 +26,31 @@ Submission components: this demo, and [ARCHITECTURE.md](ARCHITECTURE.md).
 pip install -r requirements.txt
 cp .env.example .env          # optional: add ANTHROPIC_API_KEY
 python -m db.migrate
+python -m agents.sanctions    # optional: pull today's UN sanctions list (needs internet)
 python -m uvicorn api.main:app --port 8000
 ```
 
 Open <http://localhost:8000> and press **Run analysis**.
+
+### Official sources
+
+The analysis runs on the official documents, not excerpts. Each file's origin is recorded in
+[data/regulations/sources.json](data/regulations/sources.json) and shown on the Documents page.
+
+| File | Publisher | Version |
+|---|---|---|
+| `rbi-commercial-banks-kyc-directions-2025.pdf` | Reserve Bank of India | Updated as on October 1, 2026 |
+| `prior-rbi-commercial-banks-kyc-directions-2025.pdf` | Reserve Bank of India | Updated as on September 18, 2026 (for change detection) |
+| `pmla-maintenance-of-records-rules-2005.pdf` | FIU-IND, Ministry of Finance | Consolidated text |
+
+The bank profile ([data/bank/profile.json](data/bank/profile.json)) sets the assessment scope:
+RBI ¶20, 38–46, 50–62 and PMLA r.3–5, 7–8, 10. Everything else is still extracted and
+traceable, marked *Not in this review*. The bank and its controls are sample data.
+
+The **UN Security Council Consolidated List** is synced from the UN's own XML feed
+(`python -m agents.sanctions`, or **Sync now** on the Monitoring page). RBI ¶58 requires daily
+verification, so monitoring raises an alert when the last sync is over 24 hours old, and names
+any designations added or removed since the previous sync. Schedule the command daily.
 
 > **It runs with no API key.** Obligation extraction falls back to a real rule engine
 > (modal-verb detection) and remediations come from a control-design playbook. The header
@@ -45,8 +66,10 @@ Open <http://localhost:8000> and press **Run analysis**.
 
 ```bash
 python -m tests.test_verification      # 14/14: anchoring, recovery, quarantine
-python -m tests.test_chain             # 29/29: applicability, testing, scope, conflicts, drift,
-                                       #   trainability, self-correction, AI-draft validation,
+python -m tests.test_chain             # 37/37: applicability, testing, scope, conflicts, drift,
+                                       #   gazette clause numbering, review scope, change
+                                       #   detection, sanctions sync, trainability,
+                                       #   self-correction, AI-draft validation,
                                        #   remediation re-open/closure, Q&A citation gate
 python -m extract.verify_offsets --audit   # expect 100%
 python -m extract.verify_offsets 38.       # expect PASS
@@ -55,9 +78,12 @@ python -m extract.verify_offsets 38.       # expect PASS
 Or attack it live: **Verification & proof → Try to break it**. Paste any sentence. A real one
 resolves to its clause and offsets; change a single number and it is rejected.
 
-To see ongoing monitoring work, edit a regulation in `data/regulations/` (for example change
-`within 7 days` to `within 5 days`). Within 15 seconds the UI flags drift; re-run and the
-Change agent reports `period 7 days → 5 days` against the version it saw last time.
+To see ongoing monitoring work, replace `data/regulations/rbi-commercial-banks-kyc-directions-2025.pdf`
+with another version from RBI's
+[Previous Versions](https://www.rbi.org.in/Scripts/NotificationPreVersion.aspx?id=13141) page.
+Within 15 seconds the UI flags drift; re-run and the Change agent reports each clause that
+changed against the version it saw last time. Re-paginated text, moved page numbers and
+footnotes are not reported as changes.
 
 ---
 

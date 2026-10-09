@@ -13,6 +13,7 @@ import re
 from agents import feedback
 from agents import profile as bank_profile
 from agents.base import Agent
+from extract.sectioner import NUMBERED_LINE, major
 
 _INFORMATIONAL = [
     (r"shall be called|shall come into force|short title",
@@ -55,18 +56,46 @@ def _definitional_parent(full_text: str, start: int, ref: str) -> bool:
     if "(" not in ref:
         return False
     head = full_text[max(0, start - 900):start]
-    marker = list(re.finditer(r"(?m)^\d{1,3}(?:\.\d{1,3})*\.?\s", head))
+    marker = list(re.finditer(NUMBERED_LINE, head))
     parent = head[marker[-1].start():] if marker else head
     return bool(re.search(r"\bmeans\b", parent))
 
 
+def in_review(ref: str, regulator: str, profile: dict) -> bool:
+    """
+    Whether a clause falls inside this assessment's scope, written the way reviews
+    cite it: {"RBI": "20, 38-46, 50-62"}. A range takes its lettered inserts with
+    it ("3-5" includes 3A). A regulator with no entry is in scope in full.
+    """
+    spec = profile.get("assessment_scope", {}).get("paragraphs", {}).get(regulator)
+    if not spec:
+        return True
+    head = re.match(r"\d+(?:-?[A-Z])?", ref or "")
+    if not head:
+        return False
+    ident = head.group(0)
+    for part in (p.strip() for p in spec.split(",")):
+        bounds = re.fullmatch(r"(\d+)\s*-\s*(\d+)", part)
+        if bounds and int(bounds[1]) <= major(ident) <= int(bounds[2]):
+            return True
+        if part == ident:
+            return True
+    return False
+
+
 def assess(text: str, modality: str, regulator: str, jurisdiction: str,
-           profile: dict, definitional_limb: bool = False) -> tuple[str, str, list[str]]:
+           profile: dict, definitional_limb: bool = False,
+           reviewed: bool = True) -> tuple[str, str, list[str]]:
     """Return (status, reason, business_units). Pure function so it is testable."""
     if jurisdiction not in profile.get("jurisdictions", []):
         return ("not_applicable",
                 f"Out of scope: {jurisdiction} regulation, bank operates in "
                 f"{', '.join(profile.get('jurisdictions', []))}.", [])
+    if not reviewed:
+        spec = profile["assessment_scope"]["paragraphs"][regulator]
+        return ("not_assessed",
+                f"Not in this review, which covers {regulator} {spec}. Recorded and "
+                f"traceable to the source, but not assessed against controls.", [])
 
     for pattern, reason in _INFORMATIONAL:
         if re.search(pattern, text, re.I):
@@ -125,13 +154,14 @@ class ApplicabilityAgent(Agent):
             rows = cur.fetchall()
 
         reviews = feedback.decisions(conn, "applicability")
-        counts = {"applicable": 0, "not_applicable": 0, "informational": 0}
+        counts = {"applicable": 0, "not_applicable": 0, "informational": 0, "not_assessed": 0}
         overridden = agreed = 0
         with conn.cursor() as cur:
             for ob_id, text, modality, start, ref, regulator, jurisdiction, full in rows:
                 status, reason, units = assess(
                     text, modality, regulator, jurisdiction, profile,
                     _definitional_parent(full, start, ref or ""),
+                    in_review(ref, regulator, profile),
                 )
                 review = reviews.get(feedback.obligation_key(regulator, ref, text))
                 if review and review["value"] in counts:
@@ -167,16 +197,19 @@ class ApplicabilityAgent(Agent):
             input_summary=f"{len(rows)} obligations vs profile of {profile.get('name')}",
             output_summary=(
                 f"{counts['applicable']} applicable, {counts['informational']} "
-                f"informational, {counts['not_applicable']} out of scope"
+                f"informational, {counts['not_applicable']} out of scope, "
+                f"{counts['not_assessed']} not in this review"
             ),
             reasoning=(
-                "Screened out titles, definitions and permissive clauses that impose no "
-                "duty, then tested each remaining obligation against the bank's "
-                "jurisdiction and active business lines, and assigned the business "
-                "units that must discharge it."
+                "Set aside clauses outside the assessment's declared scope, screened out "
+                "titles, definitions and permissive clauses that impose no duty, then "
+                "tested each remaining obligation against the bank's jurisdiction and "
+                "active business lines, and assigned the business units that must "
+                "discharge it."
             ),
-            tool_calls=["load_bank_profile", "classify_provision", "match_activity_triggers",
-                        "assign_business_units", "apply_reviewer_decisions"],
+            tool_calls=["load_bank_profile", "apply_assessment_scope", "classify_provision",
+                        "match_activity_triggers", "assign_business_units",
+                        "apply_reviewer_decisions"],
             model="rule_engine",
         )
         return {"summary": {**counts, "reviewer_overrides": overridden}}

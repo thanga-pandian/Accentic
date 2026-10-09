@@ -14,7 +14,7 @@ import uuid
 from datetime import date, timedelta
 from pathlib import Path
 
-from agents import feedback, workflow
+from agents import feedback, sanctions, workflow
 from agents import profile as bank_profile
 from agents.base import Agent
 
@@ -265,7 +265,32 @@ class MonitoringAgent(Agent):
             alert("human_review", "medium", f"{review} item(s) awaiting human review",
                   "Results the system could not verify were quarantined, not stored.")
 
-        # ---- 5. Risk appetite ----------------------------------------------
+        # ---- 5. Official sanctions list currency (RBI para 56, 58) ----------
+        listed = sanctions.status(conn)
+        with conn.cursor() as cur:
+            cur.execute("SELECT o.id FROM obligation o JOIN regulation r ON r.id = o.regulation_id "
+                        "WHERE r.regulator = 'RBI' AND o.clause_ref = '58' ORDER BY o.char_start")
+            daily_check = (cur.fetchone() or [None])[0]
+        link = ("obligation", daily_check) if daily_check else (None, None)
+        if listed is None:
+            alert("sanctions_list", "high", "UN sanctions list has never been synced",
+                  "RBI para 58 requires the UNSCR 1718 list to be verified every day, and para 56 "
+                  "requires screening against the UNSC lists. Run the sanctions sync.", None, *link)
+        elif listed["stale"]:
+            alert("sanctions_list", "high",
+                  f"UN sanctions list last verified {listed['age_hours']:.0f} hours ago",
+                  f"RBI para 58 requires daily verification. Last UN list on record was generated "
+                  f"{listed['date_generated'][:10]}.", None, *link)
+        if listed and (listed["added"] or listed["removed"]):
+            names = [f"{c['name']} ({c['ref']})" for c in listed["changes"].get("added", [])[:5]]
+            alert("sanctions_list", "high",
+                  f"UN sanctions list changed: {listed['added']} designation(s) added, "
+                  f"{listed['removed']} removed",
+                  (f"New: {'; '.join(names)}. " if names else "")
+                  + "Screen customers against the change the same day (RBI paras 56 and 58).",
+                  None, *link)
+
+        # ---- 6. Risk appetite ----------------------------------------------
         critical = stats.get("severity", {}).get("critical", 0)
         if stats.get("coverage_pct", 0) < appetite.get("min_coverage_pct", 0):
             alert("appetite_breach", "high",
@@ -322,7 +347,8 @@ class MonitoringAgent(Agent):
                 "and tested this run's KRIs against the bank's risk appetite."
             ),
             tool_calls=["fingerprint_sources", "diff_against_last_run", "check_test_cycles",
-                        "schedule_milestones", "evaluate_risk_appetite", "record_kris"],
+                        "schedule_milestones", "check_sanctions_list_currency",
+                        "evaluate_risk_appetite", "record_kris"],
             model="rule_engine",
         )
         return {"summary": {"alerts": len(alerts), **by_sev}}

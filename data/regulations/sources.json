@@ -1,0 +1,19 @@
+{
+  "rbi-commercial-banks-kyc-directions-2025.pdf": {
+    "publisher": "Reserve Bank of India",
+    "official_url": "https://www.rbi.org.in/Scripts/BS_ViewMasDirections.aspx?id=13141",
+    "retrieved_on": "2026-10-09"
+  },
+  "prior-rbi-commercial-banks-kyc-directions-2025.pdf": {
+    "publisher": "Reserve Bank of India",
+    "official_url": "https://www.rbi.org.in/Scripts/NotificationPreVersion.aspx?id=13141&Histid=319",
+    "retrieved_on": "2026-10-09",
+    "version": "Updated as on September 18, 2026"
+  },
+  "pmla-maintenance-of-records-rules-2005.pdf": {
+    "publisher": "Financial Intelligence Unit - India, Ministry of Finance",
+    "official_url": "https://fiuindia.gov.in/pdfs/AML_legislation/PMLA_2005.pdf",
+    "retrieved_on": "2026-10-09",
+    "version": "Consolidated text as published by FIU-IND (file dated 3 Sep 2025)"
+  }
+}

@@ -10,7 +10,9 @@ CREATE TABLE IF NOT EXISTS regulation (
     effective_from  TEXT,
     source_url      TEXT,
     full_text       TEXT NOT NULL,
-    ingested_at     TEXT NOT NULL DEFAULT (datetime('now'))
+    ingested_at     TEXT NOT NULL DEFAULT (datetime('now')),
+    official_url    TEXT,
+    retrieved_on    TEXT
 );
 
 CREATE TABLE IF NOT EXISTS reg_section (
@@ -323,3 +325,28 @@ CREATE TABLE IF NOT EXISTS kri_snapshot (
     alerts          INTEGER NOT NULL DEFAULT 0,
     captured_at     TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- Official sanctions data. Owned by the sync, not the pipeline: never reset per run.
+CREATE TABLE IF NOT EXISTS sanctions_snapshot (
+    id              TEXT PRIMARY KEY,
+    source_url      TEXT NOT NULL,
+    date_generated  TEXT NOT NULL,
+    retrieved_at    TEXT NOT NULL,
+    sha256          TEXT NOT NULL,
+    individuals     INTEGER NOT NULL DEFAULT 0,
+    entities        INTEGER NOT NULL DEFAULT 0,
+    added           INTEGER NOT NULL DEFAULT 0,
+    removed         INTEGER NOT NULL DEFAULT 0,
+    changes         TEXT
+);
+
+CREATE TABLE IF NOT EXISTS sanctions_entry (
+    id               TEXT PRIMARY KEY,
+    reference_number TEXT NOT NULL,
+    kind             TEXT NOT NULL,
+    name             TEXT NOT NULL,
+    list_type        TEXT NOT NULL,
+    listed_on        TEXT,
+    aliases          TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_sanctions_entry_list ON sanctions_entry (list_type);

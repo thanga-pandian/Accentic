@@ -20,12 +20,13 @@ from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from agents import feedback, llm, workflow
+from agents import feedback, llm, sanctions, workflow
 from agents import profile as bank_profile
 from agents.monitoring import drift, fingerprint, previous_snapshots, source_key
 from agents.orchestrator import (UPLOAD_DIR, UPLOAD_DIRS, EventStream, collect_stats,
                                  discover_sources)
 from db.connection import get_connection
+from extract.sectioner import official_source
 
 app = FastAPI(title="Accentic — Agentic Regulatory Compliance")
 
@@ -105,11 +106,12 @@ def list_documents():
                 """
                 SELECT r.source_url, r.title, r.regulator,
                        (SELECT COUNT(*) FROM reg_section s WHERE s.regulation_id = r.id),
-                       (SELECT COUNT(*) FROM obligation o WHERE o.regulation_id = r.id)
+                       (SELECT COUNT(*) FROM obligation o WHERE o.regulation_id = r.id),
+                       r.version
                 FROM regulation r
                 """
             )
-            regs = {source_key(pathlib.Path(s)): (t, g, n, o) for s, t, g, n, o in cur.fetchall()}
+            regs = {source_key(pathlib.Path(row[0])): row[1:] for row in cur.fetchall()}
             cur.execute(
                 """
                 SELECT d.source_url, d.title,
@@ -132,9 +134,11 @@ def list_documents():
             "state": "new" if prev is None else
                      ("changed" if prev["sha256"] != sha else "current"),
         }
+        doc.update(official_source(path))
         if key in regs:
             doc.update(title=regs[key][0], regulator=regs[key][1],
                        sections=regs[key][2], obligations=regs[key][3])
+            doc.setdefault("version", regs[key][4])
         if key in ctrls:
             doc.update(title=ctrls[key][0], controls=ctrls[key][1])
         out.append(doc)
@@ -227,7 +231,7 @@ def list_regulations():
     return query(
         """
         SELECT r.id, r.regulator, r.jurisdiction, r.title, r.version, r.source_url,
-               r.ingested_at, LENGTH(r.full_text) AS doc_chars,
+               r.official_url, r.retrieved_on, r.ingested_at, LENGTH(r.full_text) AS doc_chars,
                (SELECT COUNT(*) FROM reg_section s WHERE s.regulation_id = r.id) AS sections,
                (SELECT COUNT(*) FROM obligation o WHERE o.regulation_id = r.id) AS obligations
         FROM regulation r ORDER BY r.ingested_at
@@ -282,7 +286,7 @@ def get_section(section_id: str):
 def list_obligations():
     return query(
         """
-        SELECT o.id, o.clause_path, COALESCE(o.clause_ref, o.clause_path) AS clause_ref,
+        SELECT o.id, o.section_id, o.clause_path, COALESCE(o.clause_ref, o.clause_path) AS clause_ref,
                o.obligation_text, o.actor, o.modality, o.action, o.condition, o.deadline,
                o.risk_tier, o.category, o.char_start, o.char_end, o.verified,
                o.confidence, o.extracted_by, o.page_no, o.applicability,
@@ -499,7 +503,19 @@ def monitoring():
             )
             history = list(reversed(rows(cur)))
         pending = drift(conn, discover_sources())
-    return {"alerts": alerts, "kri_history": history, "drift": pending}
+        listed = sanctions.status(conn)
+    return {"alerts": alerts, "kri_history": history, "drift": pending, "sanctions": listed}
+
+
+@app.post("/api/sanctions/sync")
+def sync_sanctions():
+    """Pull the UN Security Council Consolidated List now (RBI para 58: verify daily)."""
+    with get_connection() as conn:
+        try:
+            result = sanctions.sync(conn)
+        except (OSError, ValueError) as exc:
+            raise HTTPException(502, f"Could not sync the UN sanctions list: {exc}")
+        return {**result, "status": sanctions.status(conn)}
 
 
 @app.get("/api/assurance")

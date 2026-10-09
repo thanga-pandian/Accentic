@@ -30,7 +30,7 @@ def _ref(regulator, ref):
 
 def _short(title):
     if "Know Your Customer" in (title or ""):
-        return "RBI KYC Master Direction"
+        return "RBI KYC Directions"
     if "Money-Laundering" in (title or ""):
         return "PMLA Records Rules"
     return title or ""

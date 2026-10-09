@@ -727,7 +727,7 @@ const AGENT_META = {
 
 const regShort = (title, regulator) => {
   const t = title || '';
-  if(/know your customer/i.test(t)) return 'RBI KYC Master Direction';
+  if(/know your customer/i.test(t)) return 'RBI KYC Directions';
   if(/money-laundering/i.test(t)) return 'PMLA Records Rules';
   return (regulator ? regulator + ' · ' : '') + (t.length > 34 ? t.slice(0, 32) + '…' : t);
 };
@@ -746,7 +746,8 @@ const covChip = (c, scope) => {
 };
 const appChip = a => ({applicable:`<span class="chip info"${gtip('applicable')}><span class="d"></span>Applicable</span>`,
   informational:`<span class="chip neutral"${gtip('informational')}>Informational</span>`,
-  not_applicable:`<span class="chip low"${gtip('out of scope')}><span class="d"></span>Out of scope</span>`}[a] || '');
+  not_applicable:`<span class="chip low"${gtip('out of scope')}><span class="d"></span>Out of scope</span>`,
+  not_assessed:`<span class="chip neutral"${gtip('not in this review')}>Not in this review</span>`}[a] || '');
 const indChip = r => {
   if(!r) return '<span class="muted">—</span>';
   const cls = /exception|deficient/i.test(r) ? 'critical' : /lapsed/i.test(r) ? 'medium' : /confirmed/i.test(r) ? 'good' : 'neutral';
@@ -1076,6 +1077,7 @@ const GLOSS = [
   ['Applicable', 'The requirement binds this bank, given what it does and where it operates.'],
   ['Informational', 'Looks like a rule but asks for nothing, for example a definition or the title of the regulation.'],
   ['Out of scope', 'Applies only to a business the bank does not run, so it is not assessed.'],
+  ['Not in this review', 'Outside the paragraphs this assessment covers (set in the bank profile). Still extracted and traceable to the source, but not tested against controls.'],
   ['Control', 'A process the bank runs to meet a requirement, such as screening customers or filing reports.'],
   ['Coverage', 'How well a control meets a requirement. Full: met and tested. Partial: met only in part, or the control is weak. None: nothing meets it.'],
   ['Scope gap', 'A control exists, but it does not reach something the requirement names, such as identity records rather than transaction records.'],
@@ -1196,7 +1198,8 @@ async function openObligation(id){
     <p class="muted" style="margin-top:6px;font-size:12px">The highlighted text is re-sliced from the source document at read time, <span class="mono">full_text[${o.char_start}:${o.char_end}]</span>, and compared with the stored record. It is never the model's transcription.</p>
     <dl class="kv" style="margin-top:8px"><dt>Addressee</dt><dd>${esc(o.actor || '—')}</dd><dt>Modality</dt><dd>${esc(o.modality || '—')}</dd><dt>Deadline</dt><dd>${esc(o.deadline || 'None stated')}</dd></dl>`]);
   const reviewedBadge = '<span class="chip accent">Reviewer decision</span>';
-  steps.push(['Applicability', inScope ? 'Binds this bank' : o.applicability === 'informational' ? 'Imposes no duty' : 'Out of scope',
+  steps.push(['Applicability', inScope ? 'Binds this bank' : o.applicability === 'informational' ? 'Imposes no duty'
+      : o.applicability === 'not_assessed' ? 'Not in this review' : 'Out of scope',
     inScope ? 'ok' : '', `<div style="margin-bottom:6px;display:flex;gap:6px">${appChip(o.applicability)}${o.applicability_reviewed ? reviewedBadge : ''}</div>${esc(o.applicability_reason || '')}
     ${o.applies_to ? `<dl class="kv"><dt>Owning units</dt><dd>${esc(o.applies_to)}</dd></dl>` : ''}
     ${reviewBox('applicability', o.applicability, [['applicable','Applicable'],['informational','Informational: imposes no duty'],['not_applicable','Out of scope for this bank']])}`]);
@@ -1353,7 +1356,9 @@ PAGES.overview = () => {
     ['Monitoring', st.monitor_alert, 'MonitoringAgent', 'monitoring']];
   const findings = keyFindings().slice(0, 3);
   return head(`Compliance posture · ${pf.name || ''}`,
-      `${S.regs.map(r => esc(regShort(r.title, r.regulator))).join(' and ')}, as of ${esc(fmtDate(pf.assessment_date))}. Select anything to see the source text behind it.`,
+      `${S.regs.map(r => esc(regShort(r.title, r.regulator))).join(' and ')}, as of ${esc(fmtDate(pf.assessment_date))}.`
+      + (pf.assessment_scope ? ` ${esc(pf.assessment_scope.label)} (${Object.entries(pf.assessment_scope.paragraphs).map(([g, p]) => esc(g === 'GoI' ? `PMLA r.${p}` : `${g} ¶${p}`)).join('; ')}).` : '')
+      + ` Select anything to see the source text behind it.`,
       `<button class="btn" data-act="tour">${I.compass}Take the tour</button>`)
     + verdict
     + `<div class="kpis">${tiles.join('')}</div>`
@@ -1452,7 +1457,10 @@ PAGES.sources = () => {
         <label class="btn sm" for="upFile">Choose file</label><input type="file" id="upFile" accept=".pdf,.txt" class="sr"></div>
       <p class="muted" style="font-size:12px;margin-top:10px">Regulations are split on clause numbering, never on token count, and every clause keeps exact character offsets. Control documents are parsed from <span class="mono">CTRL-XXX-NNN | Title</span> blocks; anything that cannot be parsed goes to human review rather than being dropped.</p>`)
     + card('Document inventory', table('docs', [
-        {k:'name', h:'Document', r:d => `<div style="font-weight:600">${esc(d.title || d.name)}</div><div class="muted mono" style="font-size:11px">${esc(d.path)}</div>`},
+        {k:'name', h:'Document', r:d => `<div style="font-weight:600">${esc(d.title || d.name)}</div>`
+          + (d.version ? `<div class="ink2" style="font-size:12px">${esc(d.version)}</div>` : '')
+          + (d.official_url ? `<div style="font-size:12px"><a href="${esc(d.official_url)}" target="_blank" rel="noopener">Official source: ${esc(d.publisher || new URL(d.official_url).host)} ↗</a>${d.retrieved_on ? ` <span class="muted">· downloaded ${esc(fmtDate(d.retrieved_on))}</span>` : ''}</div>` : '')
+          + `<div class="muted mono" style="font-size:11px">${esc(d.path)}</div>`},
         {k:'kind', h:'Type', r:d => `<span class="tag">${esc(KIND_LABEL[d.kind] || d.kind)}</span>`},
         {k:'format', h:'Format'},
         {k:'bytes', h:'Size', cls:'n', r:d => fmtBytes(d.bytes)},
@@ -1496,10 +1504,10 @@ ACTIONS.rmdoc = async t => {
 async function loadLibrary(regId){
   const secs = await api('/api/sections?regulation_id=' + regId);
   const reg = S.regs.find(r => r.id === regId) || {};
-  const obs = groupCount(S.obligations.filter(o => o.regulation_title === reg.title), o => o.clause_path);
+  const obs = groupCount(S.obligations.filter(o => o.regulation_title === reg.title), o => o.section_id);
   $('#libList').innerHTML = secs.map(s => `<div class="finding" data-act="sec" data-id="${s.id}" tabindex="0" role="button" style="grid-template-columns:1fr;padding:10px 14px">
     <div style="display:flex;gap:8px;align-items:center"><span class="ref">${esc(s.clause_path)}</span><span class="muted mono" style="font-size:11px">${s.char_start}–${s.char_end}</span>
-    ${obs[s.clause_path] ? `<span class="chip accent" style="margin-left:auto">${obs[s.clause_path]} obligation${obs[s.clause_path] > 1 ? 's' : ''}</span>` : ''}</div>
+    ${obs[s.id] ? `<span class="chip accent" style="margin-left:auto">${obs[s.id]} obligation${obs[s.id] > 1 ? 's' : ''}</span>` : ''}</div>
     <div class="p" style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(s.preview.replace(/\s+/g, ' '))}</div></div>`).join('');
 }
 ACTIONS.sec = async t => {
@@ -1514,7 +1522,7 @@ ACTIONS.sec = async t => {
 
 /* ---------------------------------------------------------------- Obligations */
 function obligationRows(){
-  const q = fval('ob', 'q').toLowerCase(), reg = fval('ob', 'reg'), app = fval('ob', 'app'), cat = fval('ob', 'cat'),
+  const q = fval('ob', 'q').toLowerCase(), reg = fval('ob', 'reg'), app = fval('ob', 'app', 'applicable'), cat = fval('ob', 'cat'),
         cov = fval('ob', 'cov'), sev = fval('ob', 'sev');
   return S.obligations.filter(o =>
     (!q || (o.obligation_text + ' ' + o.clause_ref + ' ' + (o.control_ref || '') + ' ' + (o.applies_to || '')).toLowerCase().includes(q)) &&
@@ -1535,7 +1543,7 @@ const OB_COLS = [
 PAGES.obligations = () => {
   if(!hasData()) return head('Obligation register', '') + card('Obligations', needRun());
   const regs = [...new Set(S.obligations.map(o => o.regulation_title))];
-  const opt = (k, v, l) => `<option value="${esc(v)}" ${fval('ob', k) === v ? 'selected' : ''}>${esc(l)}</option>`;
+  const opt = (k, v, l) => `<option value="${esc(v)}" ${fval('ob', k, k === 'app' ? 'applicable' : '') === v ? 'selected' : ''}>${esc(l)}</option>`;
   const ex = S.obligations.filter(o => o.extracted_by === 'claude').length;
   return head('Obligation register',
       `Every enforceable requirement found in the regulations, with its applicability to this bank, the control that discharges it, and its gap. ${ex ? `${ex} extracted by Claude, ` : 'Extracted by the rule engine, '}each one anchored to its exact source span and re-verified on read.`,
@@ -1543,7 +1551,7 @@ PAGES.obligations = () => {
     + `<section class="card"><div class="filters">
         <div class="search">${I.search}<input data-f="ob.q" value="${esc(fval('ob', 'q'))}" placeholder="Search text, clause, control or unit" aria-label="Search obligations"></div>
         <select class="sel" data-f="ob.reg" aria-label="Regulation"><option value="">All regulations</option>${regs.map(r => opt('reg', r, regShort(r))).join('')}</select>
-        <select class="sel" data-f="ob.app" aria-label="Applicability"><option value="">Any applicability</option>${opt('app','applicable','Applicable')}${opt('app','informational','Informational')}${opt('app','not_applicable','Out of scope')}</select>
+        <select class="sel" data-f="ob.app" aria-label="Applicability"><option value="">Any applicability</option>${opt('app','applicable','Applicable')}${opt('app','informational','Informational')}${opt('app','not_applicable','Out of scope')}${opt('app','not_assessed','Not in this review')}</select>
         <select class="sel" data-f="ob.cat" aria-label="Domain"><option value="">All domains</option>${Object.entries(CAT).filter(([k]) => S.obligations.some(o => o.category === k)).map(([k, v]) => opt('cat', k, v)).join('')}</select>
         <select class="sel" data-f="ob.cov" aria-label="Coverage"><option value="">Any coverage</option>${COV_SEG.map(([k, l]) => opt('cov', k, l)).join('')}</select>
         <select class="sel" data-f="ob.sev" aria-label="Gap severity"><option value="">Any gap</option>${SEV.map(s => opt('sev', s, cap(s))).join('')}</select>
@@ -1636,7 +1644,7 @@ PAGES.conflicts = () => {
 PAGES.profile = () => {
   const pf = S.profile, acts = pf.activities || {}, ap = pf.risk_appetite || {};
   const counts = groupCount(S.obligations, o => o.applicability);
-  const nonApp = S.obligations.filter(o => o.applicability !== 'applicable');
+  const nonApp = S.obligations.filter(o => !['applicable', 'not_assessed'].includes(o.applicability));
   const units = {};
   applicable().forEach(o => (o.applies_to || '').split(', ').filter(Boolean).forEach(u => {
     const x = units[u] ||= {unit:u, obligations:0, gaps:0, crit:0};
@@ -1666,7 +1674,7 @@ PAGES.profile = () => {
         {k:'applicability', h:'Outcome', r:o => appChip(o.applicability)},
         {k:'applicability_reason', h:'Basis', cls:'wrap', r:o => `<span class="ink2">${esc(o.applicability_reason)}</span>`},
       ], nonApp, {onRow:o => `data-ob="${o.id}" tabindex="0"`, emptyMsg:'Every extracted provision binds the bank.'}) : needRun(),
-        {flush:true, sub: hasData() ? `${counts.applicable || 0} applicable · ${counts.informational || 0} informational · ${counts.not_applicable || 0} out of scope` : ''})
+        {flush:true, sub: hasData() ? `${counts.applicable || 0} applicable · ${counts.informational || 0} informational · ${counts.not_applicable || 0} out of scope · ${counts.not_assessed || 0} not in this review` : ''})
     + card('Accountability by business unit', hasData() ? table('units', [
         {k:'unit', h:'Business unit'},
         {k:'obligations', h:'Obligations', cls:'n'},
@@ -2002,7 +2010,32 @@ function sparkline(points, key, label, fmt = v => v){
 }
 const ALERT_TYPE = {source_changed:'Source changed', source_added:'New source', source_removed:'Source removed', baseline:'Baseline',
   control_failing:'Control failing', test_overdue:'Retest overdue', test_due:'Retest due', remediation_due:'Remediation milestone',
-  regulatory_change:'Regulatory change', conflict:'Conflict', human_review:'Human review', appetite_breach:'Risk appetite'};
+  regulatory_change:'Regulatory change', conflict:'Conflict', human_review:'Human review', appetite_breach:'Risk appetite',
+  sanctions_list:'Sanctions list'};
+function sanctionsCard(sn){
+  const btn = `<button class="btn sm" data-act="sanctionsync">${I.refresh}Sync now</button>`;
+  if(!sn) return card('Official sanctions list', `<div class="callout warn">${I.warn}<div><b>Not synced yet.</b> RBI ¶58 requires the UNSCR 1718 list to be verified every day, and ¶56 requires screening against the UNSC lists. Sync pulls the UN Security Council Consolidated List from the UN’s own feed.</div></div>`,
+    {sub:'UN Security Council Consolidated List', right:btn});
+  const generated = new Date(sn.date_generated).toLocaleString('en-GB', {day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit', timeZone:'UTC'}) + ' UTC';
+  const age = sn.age_hours < 1 ? 'under an hour ago' : `${Math.round(sn.age_hours)} hours ago`;
+  const added = (sn.changes.added || []).slice(0, 5), removed = (sn.changes.removed || []).slice(0, 5);
+  return card('Official sanctions list', `
+    <div class="callout ${sn.stale ? 'warn' : 'ok'}" style="margin-bottom:12px">${sn.stale ? I.warn : I.ok}<div><b>${sn.stale ? 'Overdue:' : 'Current:'}</b> verified ${esc(age)} against the list the UN generated ${esc(generated)}. ${sn.stale ? 'RBI ¶58 requires daily verification.' : ''}</div></div>
+    ${sn.regimes.map(r => `<div class="trow"><div class="tl">${esc(r.list)}<small>RBI ¶${esc(r.rbi_para)} · UN list type ${esc(r.un_list_types.join(', '))}</small></div><b class="num">${r.individuals + r.entities}</b></div>`).join('')}
+    <p class="ink2" style="font-size:12.5px;margin-top:10px">${sn.individuals} individuals and ${sn.entities} entities. Since the previous sync: ${sn.added} added, ${sn.removed} removed.</p>
+    ${added.length ? `<p style="font-size:12.5px;margin-top:6px"><b>Added:</b> ${added.map(c => `${esc(c.name)} <span class="mono muted">${esc(c.ref)}</span>`).join('; ')}</p>` : ''}
+    ${removed.length ? `<p style="font-size:12.5px;margin-top:6px"><b>Removed:</b> ${removed.map(c => `${esc(c.name)} <span class="mono muted">${esc(c.ref)}</span>`).join('; ')}</p>` : ''}
+    <p class="muted" style="font-size:11.5px;margin-top:10px"><a href="${esc(sn.source_url)}" target="_blank" rel="noopener">Official feed: scsanctions.un.org ↗</a> · SHA-256 <span class="mono">${esc(sn.sha256.slice(0, 16))}</span> of the file as downloaded</p>`,
+    {sub:'UN Security Council Consolidated List', right:btn});
+}
+ACTIONS.sanctionsync = async t => {
+  t.disabled = true;
+  try{
+    const r = await api('/api/sanctions/sync', {method:'POST'});
+    toast(`UN list synced: ${r.designations} designations, ${r.added} added, ${r.removed} removed.`);
+    S.monitoring = await api('/api/monitoring'); render();
+  }catch(err){ toast(err.message); t.disabled = false; }
+};
 PAGES.monitoring = () => {
   if(!hasData()) return head('Ongoing monitoring', '') + card('Monitoring', needRun());
   const M = S.monitoring, hist = M.kri_history || [], drift = M.drift || [];
@@ -2015,6 +2048,7 @@ PAGES.monitoring = () => {
       `<button class="btn" data-run>${I.refresh}Re-assess now</button>`)
     + (drift.length ? `<div class="callout warn" style="margin-bottom:16px">${I.warn}<div><b>Drift detected.</b> ${drift.map(d => `${esc(d.path)} (${esc(d.change)})`).join(', ')} differ from what the last analysis saw. Re-assess to update findings.</div></div>`
        : `<div class="callout ok" style="margin-bottom:16px">${I.ok}<div><b>No drift.</b> All ${S.docs.length} source documents match the fingerprints taken on the last run. Checked every 15 seconds.</div></div>`)
+    + sanctionsCard(M.sanctions) + `<div class="spacer"></div>`
     + card('Key risk indicators across runs', hist.length ? `<div class="grid" style="grid-template-columns:repeat(4,minmax(0,1fr));gap:22px">
         ${sparkline(hist, 'coverage_pct', 'Full coverage', v => v + '%')}${sparkline(hist, 'gaps', 'Open gaps')}${sparkline(hist, 'critical', 'Critical gaps')}${sparkline(hist, 'failing_controls', 'Controls failing tests')}</div>`
         : '<div class="empty">KRIs appear after the first run.</div>', {sub:`${hist.length} run${hist.length === 1 ? '' : 's'} recorded`})
@@ -2040,9 +2074,11 @@ PAGES.verify = () => {
   if(!hasData()) return head('Verification & proof', '') + card('Verification', needRun());
   const st = S.stats, ing = S.runs.find(r => r.agent_name === 'IngestionAgent');
   const audit = (ing?.output_summary || '').match(/audit ([\d.]+)%/)?.[1] ?? '—';
-  const real = S.obligations.find(o => /7 days/.test(o.obligation_text)) || S.obligations[0];
+  const real = S.obligations.find(o => /\bfive years\b/.test(o.obligation_text))
+    || S.obligations.find(o => /\b7 days\b/.test(o.obligation_text)) || S.obligations[0];
   const realQ = real ? real.obligation_text.replace(/\s+/g, ' ').trim() : '';
-  const fake = realQ.replace(/\b7 days\b/, '10 days').replace(/\bfive\b/, 'three') || 'Records shall be destroyed after ninety days.';
+  const tampered = realQ.replace(/\bfive years\b/, 'three years').replace(/\b7 days\b/, '10 days');
+  const fake = tampered !== realQ ? tampered : 'Records shall be destroyed after ninety days.';
   const row = (k, v, n) => `<div class="trow"><div class="tl">${k}<small>${n}</small></div><b class="num">${v}</b></div>`;
   return head('Verification & proof',
       'The central integrity rule: a model may decide <i>what</i> is an obligation, but Python decides <i>where</i> it is. A quote that cannot be located in the source is treated as a hallucination. It is retried against text known to be real, and quarantined for a human if that also fails. Nothing unverifiable can reach the register.')
@@ -2091,7 +2127,7 @@ PAGES.feedback = () => {
   const held = (mapRun?.output_summary || '').match(/held-out agreement (\d+)\/(\d+)/);
   const corrections = D.filter(d => d.corrected).length;
   const applied = S.stats.reviews?.applied || 0;
-  const label = (d, v) => d.target === 'applicability' ? ({applicable:'Applicable', informational:'Informational', not_applicable:'Out of scope'}[v] || v)
+  const label = (d, v) => d.target === 'applicability' ? ({applicable:'Applicable', informational:'Informational', not_applicable:'Out of scope', not_assessed:'Not in this review'}[v] || v)
     : v === '__none__' ? 'No control' : v;
   const tile = (l, v, n) => `<div class="card kpi" style="cursor:default"><div class="lb">${l}</div><div class="v">${v}</div><div class="nt">${n}</div></div>`;
   return head('Reviewer feedback & learning',
@@ -2322,7 +2358,7 @@ PAGES.architecture = () => {
   return head('Solution architecture', 'Submission component 2 in brief. The full written architecture is in ARCHITECTURE.md. The core decision: separate <i>what</i> is an obligation (a language judgement) from <i>where</i> it is (an exact, checkable position), and keep every number a regulator might ask about deterministic.',
       `<button class="btn" data-act="print">${I.print}Print / save as PDF</button>`)
     + `<div class="grid g-7-5">`
-    + card('System layers', layer('Inputs', 'regulatory documents · internal controls and policies · bank profile', ['RBI KYC Master Direction', 'PMLA Records Rules', 'Prior versions', 'Control framework', 'profile.json', 'PDF / text upload'])
+    + card('System layers', layer('Inputs', 'regulatory documents · internal controls and policies · bank profile', ['RBI KYC Directions', 'PMLA Records Rules', 'Prior versions', 'Control framework', 'profile.json', 'PDF / text upload'])
         + arrow + layer('Ingestion and offset layer', 'extract/sectioner.py', ['pages joined into one immutable string', 'split on clause numbering', 'page offset table', 'self-audit: re-slice every clause'])
         + arrow + layer('Agent layer', 'agents/ · orchestrated in chain order', AGENT_PLAN.map(a => a[0]), true)
         + arrow + layer('Verification gate', 'agents/base.py · anchor()', ['full_text[start:end] == stored text?', 'pass → persist', 'fail → recover → quarantine'])

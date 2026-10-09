@@ -25,7 +25,7 @@ _PERIOD = re.compile(
     r"(day|days|month|months|year|years)\b",
     re.I,
 )
-_AMOUNT = re.compile(r"(?:Rs\.?|INR|₹)\s*([\d,]+)\s*(lakh|crore|thousand)?", re.I)
+_AMOUNT = re.compile(r"(?:Rs\.?|INR|₹)\s*(\d[\d,]*)\s*(lakh|crore|thousand)?", re.I)
 
 # Order-independent: a clause mentions the subject if the cue words appear at all.
 _SUBJECTS = {
@@ -55,6 +55,12 @@ _SUBJECT_LABELS = {
 _MINIMUM_PERIODS = {"retention"}
 
 _OBJECTS = re.compile(r"identity|beneficial owner|account files|correspondence", re.I)
+
+
+def _overlap(a: str, b: str) -> float:
+    """Share of content words two clauses have in common (Jaccard)."""
+    wa, wb = (set(re.findall(r"[a-z]{4,}", t.lower())) for t in (a, b))
+    return len(wa & wb) / (len(wa | wb) or 1)
 
 
 def _objects(text: str) -> frozenset:
@@ -172,8 +178,11 @@ class ContradictionAgent(Agent):
         _, clause_a, text_a, mod_a, reg_a, reg_id_a = a
         _, clause_b, text_b, mod_b, reg_b, reg_id_b = b
 
-        cross = reg_id_a != reg_id_b
-        scope = "across regulations" if cross else "within the same regulation"
+        # Within one instrument a different figure or a "shall not" is a separate duty
+        # or an exception the drafter intended, not a conflict the bank must resolve.
+        if reg_id_a == reg_id_b:
+            return None
+        scope = "across regulations"
         reg_a, reg_b = _short(reg_a), _short(reg_b)
         subject_label = _SUBJECT_LABELS.get(subject, subject.replace("_", " ").title())
         clause_a = f"clause {clause_a.rstrip('.')}"
@@ -202,7 +211,7 @@ class ContradictionAgent(Agent):
                     f"{_humanise(days_a)}; {reg_b} {clause_b} requires "
                     f"{_humanise(days_b)}. {rule} — "
                     f"{_humanise(binding)} per {src} is the binding requirement.",
-                    "high" if cross else "medium",
+                    "high",
                     0.86,
                 )
 
@@ -215,11 +224,12 @@ class ContradictionAgent(Agent):
                     f"{subject_label} {scope}. {reg_a} {clause_a} sets a threshold of "
                     f"Rs {amt_a:,.0f}; {reg_b} {clause_b} sets Rs {amt_b:,.0f}. "
                     f"A system configured to one will breach the other.",
-                    "high" if cross else "medium",
+                    "high",
                     0.83,
                 )
 
-        if {mod_a, mod_b} == {"must", "must_not"}:
+        # A mandate and a prohibition conflict only when they are about the same act.
+        if {mod_a, mod_b} == {"must", "must_not"} and _overlap(text_a, text_b) >= 0.5:
             return (
                 "opposing_modality",
                 f"{subject_label} {scope}. {reg_a} {clause_a} mandates an action that "

@@ -13,6 +13,24 @@ import re
 import uuid
 
 from agents.base import Agent
+from extract.sectioner import NUMBERED_LINE, advancing, read_source
+
+# Amendment footnotes ("2 Substituted w.e.f. October 1, 2026 ...") sit at the foot of a
+# page and run to the page break; a bare number on its own line is a page number.
+_FOOTNOTE = re.compile(r"^(?:\d{1,2}\s*)?(?:Substituted|Inserted|Omitted|Added|Deleted|Amended)"
+                       r"\s+(?:with effect|w\.e\.f|vide|by)\b")
+_PAGE_NO = re.compile(r"^\d{1,3}$")
+
+
+def _body(text: str) -> str:
+    """Clause text without page furniture, for comparison only. Re-paginating a
+    document moves page numbers and footnotes between clauses without changing a rule."""
+    pages = []
+    for page in text.split("\n\n"):
+        lines = [ln for ln in page.split("\n") if not _PAGE_NO.match(ln.strip())]
+        cut = next((i for i, ln in enumerate(lines) if _FOOTNOTE.match(ln.strip())), len(lines))
+        pages.append("\n".join(lines[:cut]))
+    return "\n\n".join(pages)
 
 
 class ChangeAgent(Agent):
@@ -26,7 +44,7 @@ class ChangeAgent(Agent):
                 self.log(conn, "skipped", output_summary="no prior version supplied",
                          model="rule_engine")
                 return {"summary": {"changes": 0}}
-            prior_text = prior_path.read_text(encoding="utf-8")
+            prior_text = read_source(prior_path)[0]
             source_label = prior_path.name
         else:
             source_label = prior_label
@@ -87,8 +105,8 @@ class ChangeAgent(Agent):
 
     def _diff_clauses(self, prior: str, current: str) -> list[dict]:
         def segment(text):
-            out, pattern = {}, re.compile(r"(?m)^(\d+(?:\.\d+)*)\.?\s", re.M)
-            marks = list(pattern.finditer(text))
+            out = {}
+            marks = advancing(re.finditer(NUMBERED_LINE, text), lambda m: m.group(1))
             for i, m in enumerate(marks):
                 end = marks[i + 1].start() if i + 1 < len(marks) else len(text)
                 out[m.group(1)] = text[m.start():end].strip()
@@ -99,7 +117,10 @@ class ChangeAgent(Agent):
 
         for clause in sorted(set(before) | set(after)):
             b, a = before.get(clause), after.get(clause)
-            if b == a:
+            # Re-flowed lines between two printings are not a change in the rule, even
+            # where a wrap splits a word or URL ("Implementation-of-" / "Implementation- of-").
+            if b is not None and a is not None and \
+                    "".join(_body(b).split()) == "".join(_body(a).split()):
                 continue
             if b is None:
                 changes.append({
@@ -114,15 +135,15 @@ class ChangeAgent(Agent):
                     "before": b[:600], "after": None, "impact": "medium",
                 })
             else:
-                ratio = difflib.SequenceMatcher(None, b, a).ratio()
-                deltas = self._numeric_deltas(b, a)
+                ratio = difflib.SequenceMatcher(None, _body(b).split(), _body(a).split()).ratio()
+                deltas = self._numeric_deltas(_body(b), _body(a))
                 if deltas:
                     summary = f"Clause {clause} amended — " + "; ".join(deltas) + "."
                     impact = "high"
                 else:
                     summary = (
                         f"Clause {clause} reworded with no change to numeric "
-                        f"requirements ({ratio:.0%} similar)."
+                        f"requirements ({ratio:.1%} of words unchanged)."
                     )
                     impact = "low"
                 changes.append({

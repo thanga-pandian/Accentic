@@ -14,5 +14,9 @@ env/
 .vscode/
 *.iml
 data/regulations/*.pdf
+# The official source documents the analysis runs on; see data/regulations/sources.json.
+!data/regulations/rbi-commercial-banks-kyc-directions-2025.pdf
+!data/regulations/prior-rbi-commercial-banks-kyc-directions-2025.pdf
+!data/regulations/pmla-maintenance-of-records-rules-2005.pdf
 data/*.db
 data/uploads/

@@ -13,6 +13,7 @@ import time
 import uuid
 
 from db.connection import get_connection
+from extract.sectioner import CLAUSE_NUMBER, major
 
 
 class VerificationError(Exception):
@@ -43,25 +44,31 @@ def anchor(quote: str, haystack: str, haystack_offset: int) -> tuple[int, int]:
     raise VerificationError(f"quote not found in source: {quote[:80]!r}")
 
 
-_MARKER = re.compile(r"(?m)^(?:(\d{1,3}(?:\.\d{1,3})*)\.?\s|\(([a-z]{1,4})\))")
+_MARKER = re.compile(
+    r"(?m)^\[?[ \t]*(?:" + CLAUSE_NUMBER + r"|\((\d{1,2}[A-Z]?)[)\]]|\(([a-z]{1,4})[)\]])"
+)
 
 
 def clause_ref(full_text: str, offset: int) -> str:
     """
-    Precise citation for an offset, e.g. '13.1(ii)'. The sectioner groups '13.1' and
-    '13.2' under '13.', so the fine-grained reference is recovered from the source.
+    Precise citation for an offset, e.g. '13.1(ii)' or rule '8(1)(a)'. The sectioner
+    groups '13.1' and '13.2' under '13.', so the fine-grained reference is recovered
+    from the source.
     """
-    num = sub = None
+    num = subrule = sub = None
     for m in _MARKER.finditer(full_text):
         if m.start() > offset:
             break
         if m.group(1):
-            num, sub = m.group(1), None
+            if num and major(m.group(1)) < major(num):
+                continue
+            num, subrule, sub = m.group(1), None, None
+        elif m.group(2):
+            subrule, sub = m.group(2), None
         else:
-            sub = m.group(2)
-    if num is None:
-        return f"({sub})" if sub else ""
-    return f"{num}({sub})" if sub else num
+            sub = m.group(3)
+    tail = (f"({subrule})" if subrule else "") + (f"({sub})" if sub else "")
+    return (num or "") + tail
 
 
 class Agent:

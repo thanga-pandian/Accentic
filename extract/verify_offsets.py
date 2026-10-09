@@ -73,11 +73,11 @@ def spot_check(clause_path: str) -> None:
                        rs.raw_text, r.full_text
                 FROM reg_section rs
                 JOIN regulation r ON r.id = rs.regulation_id
-                WHERE rs.clause_path = %s
+                WHERE rs.clause_path IN (%s, %s)
                 ORDER BY rs.created_at
                 LIMIT 1
                 """,
-                (clause_path,),
+                (clause_path, clause_path.rstrip(".") + "."),
             )
             row = cur.fetchone()
             if row is None:

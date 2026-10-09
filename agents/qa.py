@@ -78,7 +78,8 @@ def retrieve(conn, question: str) -> tuple[list[dict], list[dict]]:
          title) in obligations:
         if sid not in chosen:
             continue
-        status = ("imposes no duty on this bank" if app != "applicable" else
+        status = ("not assessed in this review" if app == "not_assessed" else
+                  "imposes no duty on this bank" if app != "applicable" else
                   f"mapped to {ctrl or 'no control'} (coverage {('scope gap: ' + scope) if scope else (cov or 'none')}"
                   f"{', independent test: ' + result if result else ''})"
                   + (f"; open {sev} gap, owner {owner}" if sev else "; no gap"))

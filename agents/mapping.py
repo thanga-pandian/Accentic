@@ -15,6 +15,7 @@ from collections import Counter
 
 from agents import feedback
 from agents.base import Agent
+from extract.sectioner import NUMBERED_LINE
 
 _STOP = set("""
 the a an and or of to in for by with on at as is are be been shall must should may
@@ -53,7 +54,7 @@ _SCOPE_TERMS = ["identity", "beneficial", "politically exposed", "reconstruct",
                 "occasional", "non-resident"]
 
 _SUFFIXES = ("ations", "ation", "ions", "ion", "ings", "ing", "ed", "es", "s")
-_NEXT_CLAUSE = re.compile(r"(?m)^\d{1,3}(?:\.\d{1,3})*\.?\s")
+_NEXT_CLAUSE = re.compile(NUMBERED_LINE)
 
 
 def scope_gaps(obligation_text: str, control_text: str) -> list[str]:
