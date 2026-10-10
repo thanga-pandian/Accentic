@@ -10,7 +10,11 @@ import re
 import uuid
 from pathlib import Path
 
+from concurrent.futures import ThreadPoolExecutor
+
 from agents import llm
+from agents import profile as bank_profile
+from agents.applicability import in_review
 from agents.base import Agent, VerificationError, anchor, clause_ref
 from extract.sectioner import NUMBERED_LINE
 
@@ -138,9 +142,9 @@ class ObligationAgent(Agent):
     def execute(self, conn, regulation_id: str, **_) -> dict:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT full_text FROM regulation WHERE id = %s", (regulation_id,)
+                "SELECT full_text, regulator FROM regulation WHERE id = %s", (regulation_id,)
             )
-            full_text = cur.fetchone()[0]
+            full_text, regulator = cur.fetchone()
             cur.execute(
                 """
                 SELECT id, clause_path, raw_text, char_start, page_no
@@ -151,14 +155,24 @@ class ObligationAgent(Agent):
             sections = cur.fetchall()
 
         stored = rejected = recovered = 0
-        used_llm = llm.available()
+        sections = [s for s in sections if len(s[2].strip()) >= 60]
 
-        for sec_id, clause_path, raw_text, sec_start, page_no in sections:
-            if len(raw_text.strip()) < 60:
-                continue
+        # Claude reads only the clauses this assessment covers; the rest are still
+        # extracted, by the rule engine, so they stay searchable and traceable.
+        profile = bank_profile.load()
+        in_scope = [in_review(clause_ref(full_text, s[3]), regulator, profile) for s in sections]
+        with ThreadPoolExecutor(max_workers=6) as pool:
+            answers = list(pool.map(
+                lambda pair: self._ask(pair[0][1], pair[0][2]) if pair[1] else None,
+                zip(sections, in_scope)))
+        used_llm = any(a is not None for a in answers)
 
+        for (sec_id, clause_path, raw_text, sec_start, page_no), answer in zip(sections, answers):
             lead = _parent_lead(full_text, sec_start) if clause_path.startswith("(") else ""
-            candidates, source = self._candidates(clause_path, raw_text, lead)
+            if answer is not None:
+                candidates, source = answer, "claude"
+            else:
+                candidates, source = _rule_extract(raw_text, lead), "rule_engine"
             if not candidates:
                 continue
 
@@ -231,13 +245,15 @@ class ObligationAgent(Agent):
             "mode": llm.mode(),
         }}
 
-    def _candidates(self, clause_path: str, raw_text: str, lead: str = "") -> tuple[list[dict], str]:
+    @staticmethod
+    def _ask(clause_path: str, raw_text: str) -> list[dict] | None:
+        """Claude's candidates for one clause (live or cached), or None to use rules."""
         result = llm.complete_json(
             SYSTEM, f"Clause {clause_path}:\n\n{raw_text}", max_tokens=4000
         )
         if isinstance(result, list) and result:
-            return [c for c in result if isinstance(c, dict) and c.get("quote")], "claude"
-        return _rule_extract(raw_text, lead), "rule_engine"
+            return [c for c in result if isinstance(c, dict) and c.get("quote")]
+        return None
 
     def _retry(self, cand: dict, raw_text: str, sec_start: int, lead: str = ""):
         """Recovery path: re-derive the obligation from text we know is real."""

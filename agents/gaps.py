@@ -7,12 +7,20 @@ Risk score is impact x likelihood, where impact comes from the obligation's risk
 tier and likelihood comes from how weak the mapped control actually is.
 """
 
+import hashlib
 import json
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from agents import llm
 from agents.base import Agent
+
+
+def _stable_key(clause: str, text: str) -> str:
+    """Same gap, same key on every run: clause plus a digest of its exact text."""
+    digest = hashlib.sha256(" ".join((text or "").split()).encode("utf-8")).hexdigest()[:10]
+    return f"{clause}#{digest}"
 
 _IMPACT = {"high": 0.95, "medium": 0.6, "low": 0.3}
 
@@ -155,7 +163,8 @@ class GapAgent(Agent):
                     (gap_id, ob_id, gap_type, severity, risk_score,
                      round(likelihood, 3), round(impact, 3), rationale, "open"),
                 )
-            gaps.append({"gap_id": gap_id, "clause": clause, "category": category,
+            gaps.append({"gap_id": gap_id, "key": _stable_key(clause, ob_text),
+                         "clause": clause, "category": category,
                          "severity": severity, "control": control_ref,
                          "test_result": test_result, "rationale": rationale,
                          "obligation": " ".join((ob_text or "").split())[:400],
@@ -217,6 +226,7 @@ class GapAgent(Agent):
 
 _PROMPT_FILE = Path(__file__).resolve().parent.parent / "prompts" / "remediation_drafting.md"
 _EFFORTS = {"S", "M", "L"}
+_BATCH = 25
 
 
 def draft_remediations(gaps: list[dict]) -> dict:
@@ -226,22 +236,35 @@ def draft_remediations(gaps: list[dict]) -> dict:
     and an action of sensible length. Anything else falls back to the playbook.
     Severity, priority and due date are never taken from the model.
     """
-    if not gaps or not llm.available():
+    if not gaps:
         return {}
-    payload = [{k: g[k] for k in ("gap_id", "clause", "category", "severity", "control",
-                                  "test_result", "rationale", "obligation")} for g in gaps]
-    result = llm.complete_json(_PROMPT_FILE.read_text(encoding="utf-8"),
-                               json.dumps(payload, indent=1), max_tokens=16000)
-    if not isinstance(result, list):
-        return {}
-    known = {g["gap_id"] for g in gaps}
+    # The model sees a key derived from the clause and its text, never the per-run
+    # gap UUID, so the same gap asks the same question on every run and a cached
+    # answer can be replayed.
+    def key(g):
+        return g.get("key") or g["gap_id"]
+    by_key = {key(g): g["gap_id"] for g in gaps}
+    ordered = sorted(gaps, key=key)
+    batches = [ordered[i:i + _BATCH] for i in range(0, len(ordered), _BATCH)]
+    system = _PROMPT_FILE.read_text(encoding="utf-8")
+
+    def ask(batch):
+        payload = [{**{k: g[k] for k in ("clause", "category", "severity", "control",
+                                          "test_result", "rationale", "obligation")},
+                    "gap_id": key(g)} for g in batch]
+        return llm.complete_json(system, json.dumps(payload, indent=1), max_tokens=16000)
+
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        results = list(pool.map(ask, batches))
+
     out = {}
-    for item in result:
-        if not isinstance(item, dict):
-            continue
-        gid, action = item.get("gap_id"), str(item.get("action") or "").strip()
-        owner, effort = str(item.get("owner_role") or "").strip(), item.get("effort")
-        if gid in known and 40 <= len(action) <= 600 and 3 <= len(owner) <= 80 \
-                and effort in _EFFORTS:
-            out[gid] = {"action": action, "owner_role": owner, "effort": effort}
+    for result in results:
+        for item in result if isinstance(result, list) else []:
+            if not isinstance(item, dict):
+                continue
+            gid, action = by_key.get(item.get("gap_id")), str(item.get("action") or "").strip()
+            owner, effort = str(item.get("owner_role") or "").strip(), item.get("effort")
+            if gid and 40 <= len(action) <= 600 and 3 <= len(owner) <= 80 \
+                    and effort in _EFFORTS:
+                out[gid] = {"action": action, "owner_role": owner, "effort": effort}
     return out

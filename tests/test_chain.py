@@ -15,6 +15,7 @@ from pathlib import Path
 _TMP = Path(tempfile.gettempdir()) / f"accentic_chain_{uuid.uuid4().hex[:8]}.db"
 os.environ["DATABASE_URL"] = f"sqlite:///{_TMP.as_posix()}"
 os.environ["ANTHROPIC_API_KEY"] = ""   # tests never spend money; load_dotenv won't override
+os.environ["ACCENTIC_LLM_CACHE"] = str(_TMP.with_suffix(".llm.json"))   # never the real cache
 
 from agents.applicability import assess                      # noqa: E402
 from agents.base import clause_ref                           # noqa: E402

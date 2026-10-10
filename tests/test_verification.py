@@ -17,6 +17,7 @@ from pathlib import Path
 # Point at a throwaway database before db.connection reads the variable.
 _TMP = Path(tempfile.gettempdir()) / f"accentic_test_{uuid.uuid4().hex[:8]}.db"
 os.environ["DATABASE_URL"] = f"sqlite:///{_TMP.as_posix()}"
+os.environ["ACCENTIC_LLM_CACHE"] = str(_TMP.with_suffix(".llm.json"))   # never the real cache
 
 from agents import llm                                    # noqa: E402
 from agents.base import VerificationError, anchor         # noqa: E402
@@ -199,7 +200,7 @@ def unrecoverable_hallucination_is_quarantined():
     When the model fabricates AND there is nothing real to fall back to, the
     claim must be routed to a human, never silently dropped or stored.
     """
-    barren = "This paragraph is descriptive and imposes no requirement of any kind."
+    barren = "50. This paragraph is descriptive and imposes no requirement of any kind."
     conn = get_connection()
     try:
         reg_id = _seed(conn, barren)
@@ -247,6 +248,47 @@ def every_stored_obligation_reproduces_its_source():
             assert full[s:e] == text, f"offset drift at [{s}:{e}]"
     finally:
         conn.close()
+
+
+@test
+def cached_claude_answer_replays_without_a_key():
+    """Claude's earlier answer is reused offline, and still has to pass the anchor."""
+    from agents.obligations import SYSTEM
+    conn = get_connection()
+    try:
+        reg_id = _seed(conn, SOURCE)
+        llm._store(llm._cache_key(SYSTEM, f"Clause 46.:\n\n{SOURCE}"), [
+            {"quote": "shall be maintained for a\nperiod of five years", "actor": "RE",
+             "modality": "must", "risk_tier": "medium", "category": "recordkeeping"},
+            {"quote": "shall be destroyed after ninety days", "modality": "must"},  # fabricated
+        ])
+        llm.available = lambda: False          # no key: only the cache can answer
+        result = ObligationAgent("test-run").execute(conn, regulation_id=reg_id)
+        with conn.cursor() as cur:
+            cur.execute("SELECT obligation_text, extracted_by FROM obligation")
+            rows = cur.fetchall()
+    finally:
+        conn.close()
+    assert rows and all(by == "claude" for _, by in rows), rows
+    assert not any("ninety" in t for t, _ in rows), "a cached fabrication was stored"
+    assert result["summary"]["recovered"] >= 1, result["summary"]
+
+
+@test
+def clauses_outside_the_review_never_reach_the_model():
+    asked = []
+    conn = get_connection()
+    try:
+        reg_id = _seed(conn, "23. The bank shall verify the identity of every customer.")
+        original = llm.complete_json
+        llm.complete_json = lambda *a, **k: asked.append(a) or None
+        try:
+            ObligationAgent("test-run").execute(conn, regulation_id=reg_id)
+        finally:
+            llm.complete_json = original
+    finally:
+        conn.close()
+    assert asked == [], "an out-of-scope clause (RBI 23) was sent to the model"
 
 
 # ---------------------------------------------------------------------------

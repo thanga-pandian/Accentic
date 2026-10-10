@@ -169,7 +169,8 @@ class QAAgent(Agent):
 
         if not sources:
             answer = []
-        elif llm.available():
+        else:
+            # Live Claude, or Claude's cached answer to this exact question and context.
             context = "\n\n".join(f"[{s['id']}] {s['ref']} ({s['title']})\n{s['text'].strip()}" for s in sources)
             facts = "\n".join(f"[{f['id']}] {f['ref']}: {f['status']}" for f in findings)
             raw = llm.complete_json(
@@ -182,8 +183,6 @@ class QAAgent(Agent):
                 mode = "claude"
             else:
                 answer = _rule_answer(question, findings)
-        else:
-            answer = _rule_answer(question, findings)
 
         self.log(
             conn, "ok",
