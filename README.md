@@ -20,17 +20,91 @@ Submission components: this demo, and [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ---
 
-## Run it
+## Run it locally (about 5 minutes)
+
+**You need:** Python 3.10 or newer, and Git. You do **not** need an API key, a database server
+or Node: it runs on SQLite, on the official regulation PDFs already in this repository.
+Tested from a fresh clone on Windows with Python 3.10 and 3.14.
+
+**1. Get the code**
 
 ```bash
+git clone https://github.com/thanga-pandian/Accentic.git
+cd Accentic
+```
+
+No Git? On GitHub choose **Code → Download ZIP**, unzip it, and open a terminal in the folder.
+
+**2. Create a virtual environment and install** (about a minute)
+
+Windows (PowerShell or Command Prompt):
+
+```powershell
+python -m venv .venv
+.venv\Scripts\activate
 pip install -r requirements.txt
-cp .env.example .env          # optional: add ANTHROPIC_API_KEY
+```
+
+macOS / Linux:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+**3. Create the database and start the app**
+
+```bash
 python -m db.migrate
-python -m agents.sanctions    # optional: pull today's UN sanctions list (needs internet)
 python -m uvicorn api.main:app --port 8000
 ```
 
-Open <http://localhost:8000> and press **Run analysis**.
+Leave this terminal running.
+
+**4. Open the app and run the analysis**
+
+Open <http://localhost:8000> and click **Run analysis** (top right). A short guided tour starts
+on the first visit; you can skip it. The twelve agents take about 30 seconds, and you can watch
+each one work. When the run finishes you should see:
+
+| What | Expected |
+|---|---|
+| Clauses read from the official PDFs | 844, offset audit 100% |
+| Obligations | 795, all proven from source; 133 in this review's scope |
+| Obligations fully covered by a tested control | 3.8%, against a 60% target |
+| Gaps | 128, of which 8 critical |
+| Controls failing their tests | 4 of 13 |
+
+**5. Things to try** (each takes under a minute)
+
+- **Trace a finding:** on the Dashboard, click the top priority action. The drawer shows the exact
+  sentence highlighted in the regulation, then the chain: applicability, control, evidence, gap
+  and remediation.
+- **Try to fool it:** Monitoring & proof → **Proof** → *Use a real sentence*, then *Use a tampered
+  number*. The tampered sentence is rejected.
+- **See an owner contradicted:** Our controls → `CTRL-RPT-040` is self-reported *Effective*, but
+  its own evidence gives *Exception*.
+- **See a real amendment:** Regulations → **What changed** → RBI ¶11.
+- **Ask a question:** open the chat bubble (bottom right). Every citation is checked against the
+  regulation before it is shown.
+
+**Optional extras**
+
+- **Today's UN sanctions list:** `python -m agents.sanctions` (needs internet), or **Sync now** on
+  Monitoring & proof → Alerts. Until then, monitoring shows the alert *"UN sanctions list has never been synced"*.
+- **Claude:** copy `.env.example` to `.env` and set `ANTHROPIC_API_KEY`. Everything above works
+  without it.
+
+**If something goes wrong**
+
+| Problem | Fix |
+|---|---|
+| `python` is not found, or is older than 3.10 | Windows: `py -3.12 -m venv .venv` (any installed 3.10+). macOS/Linux: use `python3`. |
+| PowerShell refuses to run `activate` | Run `Set-ExecutionPolicy -Scope Process Bypass`, then activate again. |
+| Windows: *"The filename or extension is too long"* during `pip install` | Clone into a short folder such as `C:\Accentic`; one dependency ships deeply nested files. |
+| Port 8000 is already in use | Start with `--port 8001` and open <http://localhost:8001>. |
+| You want to start again from nothing | Stop the app, delete `data/accentic.db`, and run `python -m db.migrate`. |
 
 ### Official sources
 
@@ -65,7 +139,7 @@ any designations added or removed since the previous sync. Schedule the command 
 ### Verify the claims yourself
 
 ```bash
-python -m tests.test_verification      # 14/14: anchoring, recovery, quarantine
+python -m tests.test_verification      # 16/16: anchoring, recovery, quarantine, cached replay
 python -m tests.test_chain             # 37/37: applicability, testing, scope, conflicts, drift,
                                        #   gazette clause numbering, review scope, change
                                        #   detection, sanctions sync, trainability,
@@ -155,8 +229,8 @@ data/            regulations, prior versions, control framework, bank profile, u
 
 ## Inputs
 
-- `data/regulations/` — RBI KYC and PMLA extracts plus a `prior-*` version for change
-  intelligence. `.pdf` (via pdfplumber) or `.txt`.
+- `data/regulations/` — the official RBI KYC Directions and PMLA Records Rules PDFs, plus the
+  `prior-*` RBI version for change intelligence. `.pdf` (via pdfplumber) or `.txt`.
 - `data/controls/` — the bank's internal control framework.
 - `data/bank/profile.json` — entity type, jurisdictions, business units, active business lines,
   risk appetite, test cycles and the fixed assessment date. Editable from the UI.

@@ -2491,7 +2491,7 @@ AFTER.agents = () => {
 /* ---------------------------------------------------------------- Problem coverage */
 PAGES.coverage = () => {
   const st = S.stats, n = v => v ?? 0, d = hasData();
-  const cov = st.coverage || {}, sev = st.severity || {};
+  const cov = st.coverage || {}, sev = st.severity || {}, ap = st.applicability || {};
   const numeric = S.changes.filter(c => /→/.test(c.summary)).length;
   const scope = S.obligations.filter(o => o.scope_gap).length;
   const ing = S.runs.find(r => r.agent_name === 'IngestionAgent');
@@ -2516,7 +2516,7 @@ PAGES.coverage = () => {
   const chainLinks = [
     ['Regulations', 'IngestionAgent', `${n(st.regulation)} documents, ${n(st.reg_section)} clauses`, 'sources'],
     ['Obligations', 'ObligationAgent', `${n(st.obligation)} extracted and verified`, 'obligations'],
-    ['Applicability', 'ApplicabilityAgent', `${n(st.applicable)} bind the bank; ${n(st.obligation) - n(st.applicable)} impose no duty`, 'profile'],
+    ['Applicability', 'ApplicabilityAgent', `${n(st.applicable)} bind the bank; ${n(ap.informational) + n(ap.not_applicable)} impose no duty; ${n(ap.not_assessed)} outside this review`, 'profile'],
     ['Internal policies / controls', 'ControlAgent', `${n(st.control)} controls`, 'controls'],
     ['Evidence', 'ControlAgent', `${n(st.evidence)} artefacts linked`, 'controls'],
     ['Testing', 'TestingAgent', `${n(st.control_test)} independent tests`, 'controls'],

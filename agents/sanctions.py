@@ -17,7 +17,7 @@ import json
 import urllib.request
 import uuid
 import xml.etree.ElementTree as ET
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from db.connection import get_connection
 
@@ -72,6 +72,18 @@ def _fetch() -> bytes:
         return resp.read()
 
 
+def _after(latest) -> datetime:
+    """Now in UTC, strictly after the latest stored sync. Snapshots are ordered by this time,
+    and a coarse clock (Windows before Python 3.13) can return the same value twice."""
+    now = datetime.now(timezone.utc)
+    if latest is not None:
+        last = latest if isinstance(latest, datetime) else datetime.fromisoformat(str(latest))
+        last = last if last.tzinfo else last.replace(tzinfo=timezone.utc)
+        if now <= last:
+            now = last + timedelta(microseconds=1)
+    return now
+
+
 def sync(conn, xml_bytes: bytes | None = None) -> dict:
     """Download (or accept) the list, diff it against the stored one, and record a snapshot."""
     xml_bytes = xml_bytes if xml_bytes is not None else _fetch()
@@ -81,8 +93,9 @@ def sync(conn, xml_bytes: bytes | None = None) -> dict:
     with conn.cursor() as cur:
         cur.execute("SELECT reference_number, name, list_type FROM sanctions_entry")
         before = {ref: (name, lt) for ref, name, lt in cur.fetchall()}
-        cur.execute("SELECT COUNT(*) FROM sanctions_snapshot")
-        first = cur.fetchone()[0] == 0
+        cur.execute("SELECT COUNT(*), MAX(retrieved_at) FROM sanctions_snapshot")
+        count, latest = cur.fetchone()
+        first = count == 0
     now = {e["reference_number"]: (e["name"], e["list_type"]) for e in entries}
     added = [] if first else sorted(set(now) - set(before))
     removed = [] if first else sorted(set(before) - set(now))
@@ -91,7 +104,7 @@ def sync(conn, xml_bytes: bytes | None = None) -> dict:
                            for r in removed]}
 
     snap_id = str(uuid.uuid4())
-    retrieved = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S.%f")
+    retrieved = _after(latest).strftime("%Y-%m-%d %H:%M:%S.%f")
     with conn.cursor() as cur:
         cur.execute("DELETE FROM sanctions_entry")
         for e in entries:

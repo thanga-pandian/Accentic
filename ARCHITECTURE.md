@@ -115,7 +115,7 @@ are shown with the answer. With no key, the agent quotes the matching obligation
 │  INGESTION & OFFSET LAYER            extract/sectioner.py                   │
 │  • pages joined into ONE immutable string  → regulation.full_text           │
 │  • split on clause numbering (38. / 38.1 / (a) / (iv) / Chapter IV)         │
-│  • precise citation recovered per offset   → 13.1(ii), 53.1(b)              │
+│  • precise citation recovered per offset   → 56(1)(i), 8(2), 3A             │
 │  • SELF-AUDIT: every section re-sliced and compared  → 100%                 │
 └───────────────────────────────┬────────────────────────────────────────────┘
                                 ▼
@@ -178,21 +178,27 @@ are shown with the answer. With no key, the agent quotes the matching obligation
 
 ### Decisions behind the headline findings
 
+**The most serious gaps have no control at all.** Five of the eight critical gaps are the UN
+sanctions duties in RBI ¶56–58: hold no account for a designated person, verify the lists every
+day, and freeze assets on an order. Nothing in the bank's control framework addresses them, so
+each is a critical *no control* gap with an owner and a due date. Monitoring separately checks
+that the UN list itself was verified within the last 24 hours.
+
 **The bank's own evidence convicts it.** `CTRL-RPT-041` (Suspicious Transaction Reporting)
-matches the STR obligation strongly, but its evidence records a **mean filing lag of 11.4 days
+maps to RBI ¶55 and PMLA Rule 8(2), but its evidence records a **mean filing lag of 11.4 days
 against a 7-day requirement**. The TestingAgent re-performs that comparison, concludes
-*Exception*, and caps effectiveness at 0.3. RBI ¶53.1(b) surfaces as a **critical gap with 70%
-residual exposure** rather than a green tick.
+*Exception*, and caps effectiveness at 0.3, so both obligations surface as **high gaps** rather
+than green ticks.
 
 **The owner says Effective; the evidence disagrees.** `CTRL-RPT-040` (Cash Transaction
 Reporting) is self-reported *Effective*, but its evidence shows 1 of 12 monthly CTRs filed after
 the deadline. Regulatory filings carry zero tolerance, so testing returns *Exception* and the
 monitoring layer raises a critical "owner result contradicted" alert.
 
-**A control can exist and still not cover the obligation.** PMLA Rule 6 requires *identity*
-records to be kept for five years after the relationship ends. `CTRL-REC-030` retains
-*transaction* records. The MappingAgent's scope check caps this at a **scope gap** instead of
-claiming full coverage.
+**A control can exist and still not cover the obligation.** PMLA Rule 10(1) requires the
+physical copy of clients' *identity* records to be kept after they are filed with the Central
+KYC Records Registry. `CTRL-REC-030` retains *transaction* records. The MappingAgent's scope
+check caps this at a **scope gap** instead of claiming full coverage.
 
 **Coverage formula:**
 
@@ -205,10 +211,12 @@ coverage  = "none"    if score < 0.13
           = "partial" otherwise
 ```
 
-**Conflicts name the binding requirement correctly.** For a filing deadline the shorter period
-binds (3 working days under PMLA Rule 9, not 7 days under RBI ¶53.1(b)). For record retention
-the *longer* period binds (10 years under PMLA Rule 5, not 5 years under RBI ¶46.2), because
-keeping records for longer satisfies both rules.
+**Conflicts name the binding requirement correctly.** The official RBI and PMLA texts contain
+no conflict on the same object, and the agent reports none: it never compares a regulation
+with itself, or two different record classes. The binding rule is proven in
+`tests/test_chain.py`: for a filing deadline the shorter period binds (3 working days, not 7
+days); for record retention the *longer* period binds (10 years, not 5), because keeping
+records for longer satisfies both rules.
 
 ---
 
@@ -247,26 +255,27 @@ engine — real modal-verb obligation detection, not a stub — and the UI label
 
 ---
 
-## 6. Feature coverage — 14 of 14
+## 6. Feature coverage — 14 of 14 built, 13 shown live
 
-Figures are from the bundled corpus on the rule engine.
+Figures are from the official RBI and PMLA texts on the rule engine, for the review scope set
+in the bank profile (RBI ¶20, 38–46, 50–62; PMLA r.3–5, 7–8, 10).
 
 | # | Feature | Implementation | Demo evidence |
 |---|---|---|---|
-| 1 | Regulatory intelligence & knowledge ingestion | `IngestionAgent`, offset self-audit, UI upload | 2 regulations, 76 clauses, audit 100% |
-| 2 | Regulatory change intelligence | `ChangeAgent`, `MonitoringAgent` source fingerprints | 20 clause changes, 5 numeric (e.g. *period 15 days → 7 days*); drift between runs |
-| 3 | Regulatory obligation extraction | `ObligationAgent` + anchoring | 37 obligations, 100% verified |
+| 1 | Regulatory intelligence & knowledge ingestion | `IngestionAgent`, offset self-audit, UI upload | 2 official regulations, 844 clauses, audit 100% |
+| 2 | Regulatory change intelligence | `ChangeAgent`, `MonitoringAgent` source fingerprints | RBI 18 Sep vs 1 Oct 2026: 2 clause changes, including the real ¶11 amendment; drift between runs |
+| 3 | Regulatory obligation extraction | `ObligationAgent` + anchoring | 795 obligations, 100% verified; 133 in the review scope |
 | 4 | Bank control-framework understanding | `ControlAgent` | 13 controls parsed with offsets |
-| 5 | Regulatory-to-control mapping | `MappingAgent` | 32 mappings: 5 full, 26 partial, 1 scope gap |
-| 6 | Control effectiveness assessment | `TestingAgent` | 39 tests: 4 exceptions, 1 lapsed, 2 contradict the owner |
+| 5 | Regulatory-to-control mapping | `MappingAgent` | 133 mappings: 5 full, 51 partial, 6 scope gaps, 71 uncovered |
+| 6 | Control effectiveness assessment | `TestingAgent` | 39 tests: 4 exceptions, 2 lapsed, 2 contradict the owner |
 | 7 | Evidence-based compliance assessment | evidence linked and re-performed | 13 artefacts; operating tests from their figures |
-| 8 | Gap identification | `GapAgent` | 27 gaps (weak control, scope gap, no control) |
-| 9 | Risk-based gap prioritisation | impact × likelihood → severity | 2 critical, 8 high, 7 medium, 10 low |
-| 10 | Remediation recommendation engine | Claude-drafted per gap (validated) or playbook; owner, effort, due date | 27 remediations, P1–P4 |
-| 11 | Autonomous regulatory impact analysis | affected obligations per change, alerts | numeric moves raised automatically |
+| 8 | Gap identification | `GapAgent` | 128 gaps: 71 no control, 51 weak control, 6 scope gap |
+| 9 | Risk-based gap prioritisation | impact × likelihood → severity | 8 critical, 75 high, 25 medium, 20 low |
+| 10 | Remediation recommendation engine | Claude-drafted per gap (validated) or playbook; owner, effort, due date | 128 remediations, P1–P4 |
+| 11 | Autonomous regulatory impact analysis | affected obligations per change, alerts | 3 obligations re-assessed for the ¶11 amendment; numeric moves raised automatically |
 | 12 | What-if / simulation | `SimulationAgent` + UI | blast radius across the live graph |
-| 13 | Cross-regulation intelligence | multi-regulation graph, one bank profile | RBI KYC + PMLA assessed together |
-| 14 | Regulatory contradiction detection | `ContradictionAgent` | 2 conflicts, binding requirement named |
+| 13 | Cross-regulation intelligence | multi-regulation graph, one bank profile | RBI KYC + PMLA assessed together (110 + 23 obligations in scope) |
+| 14 | Regulatory contradiction detection | `ContradictionAgent` | 0 conflicts in the official texts; detection and binding rule proven by tests |
 
 ### Supporting features (the second half of the feature axis)
 
@@ -287,7 +296,9 @@ Figures are from the bundled corpus on the rule engine.
 
 ### Feature axis: **F3** (requires ≥ 8 of 14)
 
-All 14 features are implemented and demonstrated in the running system.
+All 14 features are implemented, and 13 show live results on the official texts. Contradiction
+detection finds no conflict between the official RBI and PMLA texts, and its logic is proven by
+automated tests.
 
 ### Depth axis: **D2** (textual/structured input, high demonstrable reliability)
 
@@ -300,11 +311,11 @@ D2 requires **high demonstrable reliability** — and reliability here is measur
 
 | Reliability property | Mechanism | Measured result |
 |---|---|---|
-| Section offsets correct | Re-slice self-audit over every section | **100%** (76/76) |
-| Obligation text authentic | Independent re-slice at read time | **100%** (37/37) |
+| Section offsets correct | Re-slice self-audit over every section | **100%** (844/844) |
+| Obligation text authentic | Independent re-slice at read time | **100%** (795/795) |
 | Unverifiable claims excluded | Anchor failure → recovery → quarantine | 0 unverified rows persisted |
-| Non-duties excluded | Applicability screening with stated reason | 5 provisions correctly excluded |
-| Coverage not overstated | Independent testing + scope check | 4 failing controls and 1 scope gap denied full coverage |
+| Non-duties excluded | Applicability screening with stated reason | 23 provisions excluded with a reason; 639 outside the declared review, marked *Not assessed* |
+| Coverage not overstated | Independent testing + scope check | 4 failing controls and 6 scope gaps denied full coverage |
 | Conflicts resolved correctly | Direction-aware binding rule, object check | Tested in `tests/test_chain.py` |
 | The chain is internally consistent | `AssuranceAgent`, eight invariants, self-correction | 8/8 hold; self-correction tested |
 | Model drafts cannot corrupt the register | Draft validation; deterministic severity and dates | Invalid and invented drafts rejected (tested) |
@@ -312,7 +323,7 @@ D2 requires **high demonstrable reliability** — and reliability here is measur
 | A fix is not declared done on say-so | `WorkflowAgent` re-open / verified closure | Tested |
 | Every action auditable | `agent_run`: reasoning, tools, retries, duration | 12 agents per run |
 | Human oversight path | `needs_review` queue, reviewer corrections | Populated on failure, never silent |
-| Behaviour is tested | `tests/test_verification.py`, `tests/test_chain.py` | 14/14 and 29/29 |
+| Behaviour is tested | `tests/test_verification.py`, `tests/test_chain.py` | 16/16 and 37/37 |
 
 **The honest path to D3** is OCR for scanned circulars, table extraction for threshold
 schedules, and layout-aware parsing for multi-column gazette PDFs. The offset contract already
@@ -345,28 +356,28 @@ generalises to those inputs; only the ingestion front-end changes.
 
 ## 9. Business impact
 
-Measured on the bundled corpus (rule engine), per run:
+Measured on the official texts (rule engine), per run:
 
 | Measure | Value |
 |---|---|
-| Obligation × control pairs assessed | 32 × 13 = 416 |
+| Obligation × control pairs assessed | 133 × 13 = 1,729 |
 | Control tests re-performed from evidence | 39 |
-| Clauses audited against the source | 76 |
-| Whole chain, end to end | under one second |
+| Clauses audited against the source | 844 |
+| Whole chain, end to end, from a fresh clone | about 30 seconds on a laptop |
 
 What that buys a bank:
 
 - **Risk reduction.** Critical and high gaps are found, owned and dated before an inspection
-  finds them, including an STR filing lag that breaches the 7-day deadline, and the stricter
-  3-working-day PMLA requirement that actually binds.
+  finds them, including five UN sanctions duties with no control at all and an STR filing lag
+  of 11.4 days against a 7-day requirement.
 - **Assurance quality.** Controls reported effective by their owners are tested against their own
   evidence; two are contradicted on this corpus.
 - **Speed to impact.** A changed regulation is diffed, sized and alerted on the next run rather
   than at the next audit cycle.
 - **Productivity (illustrative, assumption stated).** At an assumed 10 minutes per manual
-  obligation-to-control assessment and 1 hour per control-test re-performance, one run replaces
-  roughly 18 analyst hours on this small corpus; the effort scales linearly with corpus size
-  while the run time stays in seconds.
+  obligation-to-control assessment and 1 hour per control re-performance, one run replaces
+  roughly 35 analyst hours for this review scope (133 obligations, 13 controls); the effort
+  scales linearly with scope while a run takes about half a minute.
 
 ---
 
@@ -392,15 +403,20 @@ What that buys a bank:
 - User accounts and role-based access: there is one optional shared token, not per-user identity.
 - Live polling of regulator websites. Change detection runs against files in the corpus:
   edits and new uploads are detected automatically between runs, and the UI polls for drift.
+  The UN Security Council sanctions list is the exception: it syncs from the UN's own feed.
 - Authentication, multi-tenancy, and workflow state transitions on remediations.
 - Control testing re-performs only what the evidence states numerically; descriptive evidence
   is marked "relied" pending a sample test, not passed.
-- The RBI and PMLA files are representative extracts; the pipeline is source-agnostic and runs
-  unchanged against the official PDF placed in `data/regulations/` or uploaded in the UI.
+- The bank, its control framework and its evidence are sample data. The regulations are the
+  official published texts; each file's source and retrieval date are recorded in
+  `data/regulations/sources.json`.
 
 ---
 
 ## 12. Reproducing the demo
+
+Step-by-step instructions for Windows, macOS and Linux, the figures to expect and a
+troubleshooting table are in the [README](README.md#run-it-locally-about-5-minutes). In short:
 
 ```bash
 pip install -r requirements.txt
