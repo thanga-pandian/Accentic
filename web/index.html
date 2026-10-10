@@ -4,6 +4,9 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Accentic · Regulatory Compliance Intelligence</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%236200ad'/%3E%3Cstop offset='1' stop-color='%23b24bff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='url(%23g)'/%3E%3Crect x='7.2' y='16.3' width='17.6' height='5' rx='2.5' fill='%23ffc83d' transform='rotate(-8 16 18.8)'/%3E%3Cpath d='M9.1 24.4 16 8l6.9 16.4' fill='none' stroke='%23fff' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<meta name="theme-color" content="#6200ad">
+<meta name="description" content="Accentic: agentic regulatory compliance, with every finding traced to the exact source text.">
 <style>
 /* ======================================================================
    Tokens. Every colour is a role; light and dark are selected separately.
@@ -80,10 +83,8 @@ a:hover{text-decoration:underline}
   border-right:1px solid rgba(255,255,255,.06);min-height:0;
 }
 .brand{display:flex;align-items:center;gap:11px;padding:18px 18px 16px}
-.mark{
-  width:32px;height:32px;border-radius:8px;display:grid;place-items:center;flex-shrink:0;
-  background:#a100ff;color:#fff;font-weight:800;font-size:17px;letter-spacing:-.5px;
-}
+.mark{width:34px;height:34px;flex-shrink:0;display:block;filter:drop-shadow(0 3px 8px rgba(130,0,230,.35))}
+.mark svg,.avatar svg{width:100%;height:100%;display:block}
 .brand b{display:block;font-size:15px;font-weight:700;letter-spacing:-.2px}
 .brand span{display:block;font-size:11px;color:var(--side-muted);line-height:1.3}
 .navscroll{flex:1;overflow-y:auto;padding:4px 10px 12px}
@@ -336,6 +337,9 @@ table.t tr:last-child td{border-bottom:none}
 table.t tbody tr.click{cursor:pointer}
 table.t tbody tr.click:hover td{background:var(--surface-2)}
 table.t td.wrap{min-width:280px;max-width:520px}
+table.t td.wrap-s{min-width:150px}
+table.t td.wrap-m{min-width:210px}
+table.t td.nowrap,table.t th.nowrap{white-space:nowrap}
 table.t .clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 table.t td.n,table.t th.n{text-align:right;font-variant-numeric:tabular-nums}
 .empty{padding:48px 20px;text-align:center;color:var(--muted)}
@@ -476,13 +480,15 @@ input.txt:focus,textarea.txt:focus,select.sel:focus,.search:focus-within{outline
 .agent .ms{font:12px ui-monospace,Consolas,monospace;color:var(--muted);white-space:nowrap}
 
 /* Pipeline graph */
-.pipe{display:flex;align-items:stretch;gap:0;overflow-x:auto;padding:16px}
+.pipe{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px 18px;padding:16px}
+@media (max-width:1100px){.pipe{grid-template-columns:repeat(3,minmax(0,1fr))}}
 .pnode{
-  flex:1;min-width:112px;padding:10px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);
-  font-size:12px;position:relative;margin-right:18px;
+  min-width:0;padding:10px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);
+  font-size:12px;position:relative;
 }
-.pnode:last-child{margin-right:0}
 .pnode:not(:last-child)::after{content:"";position:absolute;right:-15px;top:50%;width:12px;height:1.5px;background:var(--line-2)}
+.pnode:nth-child(6n)::after{display:none}
+@media (max-width:1100px){.pnode:nth-child(6n)::after{display:block}.pnode:nth-child(3n)::after{display:none}}
 .pnode b{display:block;font-size:12px;font-weight:650;white-space:nowrap}
 .pnode span{display:block;font-size:11px;color:var(--muted);margin-top:2px}
 .pnode.running{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
@@ -635,7 +641,7 @@ kbd{white-space:nowrap;font:11px ui-monospace,Consolas,monospace;padding:1px 6px
 .chat-panel.on{opacity:1;visibility:visible;transform:none;transition:opacity .2s ease,transform .28s cubic-bezier(.2,.9,.3,1.15)}
 .chat-head{display:flex;align-items:center;gap:11px;padding:14px 14px 14px 16px;color:#fff;
   background:linear-gradient(135deg,#5b00a0,#8f00f0 55%,#b45cff)}
-.chat-head .avatar{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);position:relative}
+.chat-head .avatar{width:34px;height:34px;position:relative;border-radius:9px;box-shadow:0 0 0 2px rgba(255,255,255,.4)}
 .chat-head .avatar::after{content:"";position:absolute;right:-2px;bottom:-2px;width:10px;height:10px;border-radius:50%;background:#22c55e;border:2px solid #7a00cc}
 .chat-head b{display:block;font-size:14.5px;font-weight:700}
 .chat-head small{display:block;font-size:11.5px;opacity:.85}
@@ -647,7 +653,7 @@ kbd{white-space:nowrap;font:11px ui-monospace,Consolas,monospace;padding:1px 6px
 .chat-panel.has .chat-head .acts .newc{display:grid}
 .chat-body{flex:1;overflow-y:auto;padding:16px 14px 8px;display:flex;flex-direction:column;gap:16px}
 
-.avatar{width:28px;height:28px;border-radius:9px;background:#a100ff;color:#fff;display:grid;place-items:center;font-weight:800;font-size:13px;flex-shrink:0}
+.avatar{width:28px;height:28px;border-radius:8px;flex-shrink:0}
 .msg{display:flex;gap:9px;align-items:flex-start}
 .msg.new{animation:msgin .3s cubic-bezier(.2,.9,.3,1.2)}
 @keyframes msgin{from{opacity:0;transform:translateY(10px) scale(.98)}}
@@ -726,7 +732,7 @@ kbd{white-space:nowrap;font:11px ui-monospace,Consolas,monospace;padding:1px 6px
 <div class="shell">
   <aside class="side" aria-label="Primary">
     <div class="brand">
-      <div class="mark" aria-hidden="true">A</div>
+      <div class="mark" aria-hidden="true"><svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="lg-side" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6200ad"/><stop offset="1" stop-color="#b24bff"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="url(#lg-side)"/><rect x="7.2" y="16.3" width="17.6" height="5" rx="2.5" fill="#ffc83d" transform="rotate(-8 16 18.8)"/><path d="M9.1 24.4 16 8l6.9 16.4" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
       <div class="bt"><b>Accentic</b><span>Regulatory Compliance Intelligence</span></div>
       <button class="navtoggle" id="navToggle" aria-label="Collapse the sidebar" title="Collapse the sidebar"></button>
     </div>
@@ -817,6 +823,14 @@ const by = (k, dir=1) => (a, b) => (a[k] > b[k] ? 1 : a[k] < b[k] ? -1 : 0) * di
 const groupCount = (arr, f) => arr.reduce((m, x) => (m[f(x)] = (m[f(x)] || 0) + 1, m), {});
 
 const P = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+/* The Accentic mark: an A over a highlighter stroke, because every claim highlights
+   its exact source text. Each copy gets its own gradient id so no instance depends
+   on another one being rendered. */
+let logoSeq = 0;
+const logo = () => {
+  const id = 'lg' + (++logoSeq);
+  return `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6200ad"/><stop offset="1" stop-color="#b24bff"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="url(#${id})"/><rect x="7.2" y="16.3" width="17.6" height="5" rx="2.5" fill="#ffc83d" transform="rotate(-8 16 18.8)"/><path d="M9.1 24.4 16 8l6.9 16.4" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+};
 const I = {
   grid: P('<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>'),
   file: P('<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>'),
@@ -1043,7 +1057,7 @@ function render(){
   lastInSection[section.id] = r;
   $('#crumb').textContent = section.label;
   $('#title').textContent = label;
-  document.title = `${label} · ${section.label} · Accentic`;
+  document.title = `${section.pages.length > 1 ? label : section.label} — Accentic`;
   UI.refresh = null;
   const tabs = section.pages.length > 1 ? `<div class="tabs" role="tablist" aria-label="${esc(section.label)}">${section.pages.map(([id, l]) => {
     const c = navCount(id);
@@ -1587,7 +1601,7 @@ const QA_SUGGEST = [
   'What is required to identify beneficial owners of companies?',
 ];
 UI.qa = [];
-const botMsg = (inner, isNew, foot = '') => `<div class="msg bot${isNew ? ' new' : ''}"><div class="avatar" aria-hidden="true">A</div>
+const botMsg = (inner, isNew, foot = '') => `<div class="msg bot${isNew ? ' new' : ''}"><div class="avatar">${logo()}</div>
   <div class="body"><div class="bubble">${inner}</div>${foot}</div></div>`;
 function answerHtml(a, i, isNew){
   if(!a) return botMsg(`<span class="typing" aria-label="Accentic is answering"><i></i><i></i><i></i></span>
@@ -1619,7 +1633,7 @@ function answerHtml(a, i, isNew){
 const CHAT = {open:false, built:false};
 function buildChat(){
   const p = $('#chatPanel');
-  p.innerHTML = `<header class="chat-head"><div class="avatar" aria-hidden="true">A</div>
+  p.innerHTML = `<header class="chat-head"><div class="avatar">${logo()}</div>
       <div><b>Accentic</b><small>Compliance assistant · cites the exact source</small></div>
       <div class="acts"><button class="newc" data-act="newchat" aria-label="New chat" title="New chat">${I.plus}</button>
         <button data-act="chatclose" aria-label="Close" title="Close (Esc)">${I.x}</button></div></header>
@@ -1640,7 +1654,7 @@ function renderChat(){
   const last = UI.qa.length - 1;
   $('#qaLog').innerHTML = UI.qa.length
     ? UI.qa.map((x, i) => `<div class="msg user${i === last && !x.a ? ' new' : ''}"><div class="bubble">${esc(x.q)}</div></div>${answerHtml(x.a, i, i === last)}`).join('')
-    : `<div class="welcome"><div class="msg bot"><div class="avatar" aria-hidden="true">A</div><div class="bubble"><b>Hi, I’m Accentic.</b>Ask me about your obligations in plain English. I answer only from the regulations I’ve read, and every citation is checked against the source before you see it.</div></div>
+    : `<div class="welcome"><div class="msg bot"><div class="avatar">${logo()}</div><div class="bubble"><b>Hi, I’m Accentic.</b>Ask me about your obligations in plain English. I answer only from the regulations I’ve read, and every citation is checked against the source before you see it.</div></div>
         <div class="suggest">${QA_SUGGEST.map(q => `<button data-act="askq" data-v="${esc(q)}">${esc(q)}${I.arrow}</button>`).join('')}</div></div>`;
   $('#chatPanel').classList.toggle('has', UI.qa.length > 0);
   $('#qaSend').disabled = !!UI.qaBusy;
@@ -1922,19 +1936,19 @@ PAGES.profile = () => {
         <input class="txt num" id="ap-${k}" data-pf-ap="${esc(k)}" type="number" min="0" step="1" value="${esc(v)}" style="width:86px;text-align:right;padding:5px 8px"><span class="muted" style="width:14px">${(apLabel[k] || [,''])[1]}</span></div>`).join('')
         + `<p class="muted" style="font-size:12px;margin-top:10px">Breaches raise monitoring alerts on every run.</p>`)
     + `</div><div class="grid g-7-5 mt">`
-    + card('Provisions that impose no duty on this bank', hasData() ? table('na', [
-        {k:'clause_ref', h:'Reference', r:o => `<span class="ref">${esc(refLabel(o.regulator, o.clause_ref))}</span>`},
-        {k:'obligation_text', h:'Text', cls:'wrap', r:o => `<div class="clamp">${esc(o.obligation_text.replace(/\s+/g, ' '))}</div>`},
+    + card('No duty for this bank', hasData() ? table('na', [
+        {k:'clause_ref', h:'Reference', cls:'nowrap', r:o => `<span class="ref">${esc(refLabel(o.regulator, o.clause_ref))}</span>`},
+        {k:'obligation_text', h:'Text', cls:'wrap-s', r:o => `<div class="clamp">${esc(o.obligation_text.replace(/\s+/g, ' '))}</div>`},
         {k:'applicability', h:'Outcome', r:o => appChip(o.applicability)},
-        {k:'applicability_reason', h:'Basis', cls:'wrap', r:o => `<span class="ink2">${esc(o.applicability_reason)}</span>`},
+        {k:'applicability_reason', h:'Basis', cls:'wrap-s', r:o => `<div class="clamp ink2" style="font-size:12px">${esc(o.applicability_reason)}</div>`},
       ], nonApp, {onRow:o => `data-ob="${o.id}" tabindex="0"`, emptyMsg:'Every extracted provision binds the bank.'}) : needRun(),
         {flush:true, sub: hasData() ? `${counts.applicable || 0} applicable · ${counts.informational || 0} informational · ${counts.not_applicable || 0} out of scope · ${counts.not_assessed || 0} not in this review` : ''})
-    + card('Accountability by business unit', hasData() ? table('units', [
+    + card('Who owns what', hasData() ? table('units', [
         {k:'unit', h:'Business unit'},
         {k:'obligations', h:'Obligations', cls:'n'},
         {k:'gaps', h:'Open gaps', cls:'n'},
         {k:'crit', h:'Critical / high', cls:'n', r:u => u.crit ? `<span class="chip high"><span class="d"></span>${u.crit}</span>` : '0'},
-      ], Object.values(units).sort(by('obligations', -1))) : needRun(), {flush:true, sub:'Derived from each obligation’s subject matter'})
+      ], Object.values(units).sort(by('obligations', -1))) : needRun(), {flush:true, sub:'By business unit'})
     + `</div>`;
 };
 async function saveProfile(){
@@ -1978,14 +1992,14 @@ AFTER.controls = () => {
     const q = fval('ct', 'q').toLowerCase(), r = fval('ct', 'r'), open = fval('ct', 'open');
     const rows = S.controls.filter(c => (!q || (c.control_ref + c.title + c.description + c.owner).toLowerCase().includes(q)) && (!r || c.independent_result === r));
     let html = table('ct', [
-      {k:'control_ref', h:'Control', r:c => `<span class="ref">${esc(c.control_ref)}</span><div style="font-weight:600;margin-top:2px">${esc(c.title)}</div><div class="muted" style="font-size:11.5px">${esc(c.owner)}</div>`},
-      {k:'control_type', h:'Type', r:c => `${esc(c.control_type)}<div class="muted" style="font-size:11.5px">${c.automated ? 'Automated' : 'Manual'} · ${esc(c.frequency)}</div>`},
-      {k:'last_tested', h:'Last tested', r:c => esc(fmtDate(c.last_tested))},
-      {k:'test_result', h:'Owner-reported', r:c => ownerChip(c.test_result)},
-      {k:'independent_result', h:'Independent result', r:c => indChip(c.independent_result)},
+      {k:'control_ref', h:'Control', cls:'wrap-m', r:c => `<span class="ref">${esc(c.control_ref)}</span><div style="font-weight:600;margin-top:2px">${esc(c.title)}</div><div class="muted" style="font-size:11.5px">${esc(c.owner)}</div>`},
+      {k:'control_type', h:'Type', cls:'wrap-s', r:c => `${esc(c.control_type)}<div class="muted" style="font-size:11.5px">${c.automated ? 'Automated' : 'Manual'} · ${esc(c.frequency)}</div>`},
+      {k:'last_tested', h:'Last tested', cls:'nowrap', r:c => esc(fmtDate(c.last_tested))},
+      {k:'test_result', h:'Owner says', r:c => ownerChip(c.test_result)},
+      {k:'independent_result', h:'Independent', r:c => indChip(c.independent_result)},
       {k:'effectiveness', h:'Effectiveness', r:effCell},
-      {k:'evidence_ref', h:'Evidence', cls:'wrap', r:c => `<div class="clamp ink2" style="font-size:12px">${esc(c.evidence_ref || '—')}</div>`},
-      {k:'mapped_obligations', h:'Obligations', cls:'n'},
+      {k:'evidence_ref', h:'Evidence', cls:'wrap-s', r:c => `<div class="clamp ink2" style="font-size:12px">${esc(c.evidence_ref || '—')}</div>`},
+      {k:'mapped_obligations', h:'Linked', cls:'n'},
     ], rows, {onRow:c => `data-act="ctopen" data-id="${c.id}" tabindex="0" ${open === c.id ? 'style="background:var(--accent-soft)"' : ''}`});
     $('#ctTable').innerHTML = html;
     if(open){
@@ -2085,12 +2099,13 @@ AFTER.gaps = () => {
     $('#gapTable').innerHTML = table('gap', [
       {k:'risk_score', h:'Severity', sort:g => -g.risk_score, r:g => sevChip(g.severity)},
       {k:'clause_ref', h:'Reference', r:g => `<span class="ref">${esc(refLabel(g.regulator, g.clause_ref))}</span><div class="muted" style="font-size:11px">${esc(CAT[g.category] || g.category)}</div>`},
-      {k:'rationale', h:'Gap', cls:'wrap', r:g => `<div class="clamp">${esc(g.rationale)}</div>`},
+      {k:'rationale', h:'Requirement and gap', cls:'wrap', r:g => `<div class="clamp" style="font-weight:550">${esc((g.excerpt || '').replace(/\s+/g, ' ').replace(/^\W*(?:\(\w+\)|\d+[A-Z]?\.)\s*/, ''))}</div>
+        <div class="muted" style="font-size:11.5px;margin-top:2px">${esc(g.rationale)}</div>`},
       {k:'gap_type', h:'Root cause', r:g => `<span class="tag">${esc(GAP_TYPE[g.gap_type] || g.gap_type)}</span>`},
       {k:'control_ref', h:'Control', r:g => g.control_ref ? `<span class="ref">${esc(g.control_ref)}</span><div style="margin-top:3px">${indChip(g.independent_result)}</div>` : '<span class="muted">None</span>'},
       {k:'impact', h:'Impact × likelihood', cls:'n', sort:g => g.risk_score, r:g => `<span class="mono">${g.impact.toFixed(2)} × ${g.likelihood.toFixed(2)}</span><div><b class="num">${g.risk_score.toFixed(2)}</b></div>`},
       {k:'owner_role', h:'Owner', r:g => esc(g.owner_role)},
-      {k:'due_date', h:'Due', r:g => esc(fmtDate(g.due_date))},
+      {k:'due_date', h:'Due', cls:'nowrap', r:g => esc(fmtDate(g.due_date))},
     ], rows, {onRow:g => `data-ob="${g.obligation_id}" tabindex="0"`});
   };
   UI.refresh();
@@ -2201,7 +2216,7 @@ ACTIONS.remcsv = () => csv('remediation-plan.csv', [
 
 /* ---------------------------------------------------------------- What-if */
 const PRESETS = [
-  'STR filing deadline reduced from 7 days to 3 working days',
+  'STR filing required within 3 working days',
   'Record retention for all transactions extended to ten years',
   'Beneficial ownership threshold lowered from 25% to 10%',
   'Senior management approval required for every PEP relationship',
@@ -2625,7 +2640,7 @@ PAGES.architecture = () => {
         {k:'0', h:'Stage', sort:false, r:r => `<b>${esc(r[0])}</b>`},
         {k:'1', h:'Claude', sort:false, r:r => esc(r[1])},
         {k:'2', h:'Deterministic', sort:false, r:r => esc(r[2])},
-        {k:'3', h:'Why', cls:'wrap', sort:false, r:r => `<span class="ink2">${esc(r[3])}</span>`},
+        {k:'3', h:'Why', cls:'wrap-s', sort:false, r:r => `<span class="ink2">${esc(r[3])}</span>`},
       ], MODEL), {flush:true, sub:'AI where judgement is needed, withheld where exact reproducibility is'})
     + `<div class="spacer"></div>` + card('Responsible AI', `<ul style="padding-left:18px;font-size:12.8px;color:var(--ink-2);display:flex;flex-direction:column;gap:6px">
         <li><b style="color:var(--ink)">Hallucination</b> is structurally prevented: claims that cannot be anchored cannot be stored.</li>

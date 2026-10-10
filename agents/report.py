@@ -9,6 +9,7 @@ by a model, so the report reproduces exactly from the same run.
 
 from datetime import datetime, timezone
 from html import escape
+from urllib.parse import quote
 
 from agents import feedback, workflow
 from agents import profile as bank_profile
@@ -26,6 +27,17 @@ SEV_COLOUR = {"critical": "#d03b3b", "high": "#ec835a", "medium": "#fab219", "lo
 def _ref(regulator, ref):
     ref = (ref or "").rstrip(".")
     return f"PMLA r.{ref}" if regulator == "GoI" else f"{regulator} ¶{ref}"
+
+
+def _logo(uid: str) -> str:
+    """The Accentic mark, same geometry as the web app's; uid keeps gradient ids unique."""
+    return (f'<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><defs>'
+            f'<linearGradient id="lg-{uid}" x1="0" y1="0" x2="1" y2="1">'
+            f'<stop offset="0" stop-color="#6200ad"/><stop offset="1" stop-color="#b24bff"/>'
+            f'</linearGradient></defs><rect width="32" height="32" rx="8" fill="url(#lg-{uid})"/>'
+            f'<rect x="7.2" y="16.3" width="17.6" height="5" rx="2.5" fill="#ffc83d" '
+            f'transform="rotate(-8 16 18.8)"/><path d="M9.1 24.4 16 8l6.9 16.4" fill="none" '
+            f'stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>')
 
 
 def _short(title):
@@ -192,6 +204,7 @@ def build(conn) -> str:
     return f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
 <title>Compliance report · {e(pf.get('name', ''))} · {_date(pf.get('assessment_date'))}</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,{quote(_logo('f'))}">
 <style>
 @page {{ size: A4; margin: 18mm 16mm 20mm; }}
 * {{ box-sizing: border-box; }}
@@ -224,13 +237,15 @@ td.n {{ text-align: right; font-variant-numeric: tabular-nums; }}
 .foot {{ margin-top: 26px; font-size: 8.5pt; color: #6b7280; border-top: 1px solid #e4e6eb; padding-top: 8px; }}
 .bar {{ position: sticky; top: 0; background: #14111b; color: #fff; padding: 10px 28px; display: flex; gap: 10px; align-items: center; font-size: 10pt; }}
 .bar button, .bar a {{ background: #a100ff; color: #fff; border: 0; border-radius: 6px; padding: 7px 12px; font: inherit; font-weight: 600; cursor: pointer; text-decoration: none; }}
+.lg {{ display: inline-block; width: 22px; height: 22px; flex-shrink: 0; }} .lg svg {{ width: 100%; height: 100%; display: block; }}
+.brandrow {{ display: flex; align-items: center; gap: 9px; }} .cover .lg {{ width: 26px; height: 26px; }}
 @media print {{ .bar {{ display: none; }} .wrap {{ padding: 0; }} }}
 </style></head><body>
-<div class="bar"><b>Board report</b><span style="opacity:.7">Generated {generated}</span><span style="flex:1"></span>
+<div class="bar"><span class="lg">{_logo('b')}</span><b>Accentic · Board report</b><span style="opacity:.7">Generated {generated}</span><span style="flex:1"></span>
 <button onclick="window.print()">Print / save as PDF</button><a href="/api/report?format=doc">Download Word</a></div>
 <div class="wrap">
 <div class="cover">
-  <div class="kicker">Regulatory compliance assessment · Board pack</div>
+  <div class="brandrow"><span class="lg">{_logo('c')}</span><span class="kicker">Regulatory compliance assessment · Board pack</span></div>
   <h1>{e(pf.get('name', ''))}</h1>
   <div class="meta">{e(pf.get('entity_type', ''))} · {e(', '.join(pf.get('jurisdictions', [])))} · Assessment as of {_date(pf.get('assessment_date'))}<br>
   Prepared by Accentic agentic compliance analysis · generated {generated} · extraction engine: {'Claude Opus 5.5' if st.get('mode') == 'claude' else 'deterministic rule engine'}</div>
