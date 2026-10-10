@@ -123,7 +123,6 @@ a:hover{text-decoration:underline}
 .crumbs{flex-shrink:0;min-width:150px}
 @media (max-width:1440px){#runPill{display:none}}
 @media (max-width:1300px){.entity{display:none}}
-@media (max-width:1100px){#modePill{display:none}}
 .iconbtn{width:34px;height:34px;border-radius:8px;display:grid;place-items:center;border:1px solid var(--line);background:var(--surface);color:var(--ink-2)}
 .iconbtn:hover{background:var(--surface-2);color:var(--ink)}
 .iconbtn svg{width:16px;height:16px}
@@ -203,10 +202,94 @@ a:hover{text-decoration:underline}
 
 /* Proof loop: find the sentence, match it, tick */
 .proof{display:flex;align-items:center;gap:3px;margin-top:9px;height:14px}
-.proof i{flex:1;height:6px;border-radius:3px;background:var(--line-2)}
+.proof i{flex:1;height:6px;border-radius:3px;background:var(--good-bg)}
 .proof .hit{flex:1.6;animation:prove 3.2s ease-in-out infinite}
 .proof svg{width:14px;height:14px;color:var(--good);opacity:0;animation:tick 3.2s ease-in-out infinite}
-@keyframes prove{0%,15%{background:var(--line-2)}35%,50%{background:var(--hl-ring)}65%,100%{background:var(--good)}}
+@keyframes prove{0%,15%{background:var(--good-bg)}35%,50%{background:var(--hl-ring)}65%,100%{background:var(--good)}}
+
+/* Dashboard */
+.dhead{margin-bottom:18px}
+.dhead h2{font-size:22px;font-weight:700;letter-spacing:-.4px}
+.dmeta{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;margin-top:4px;font-size:12.5px;color:var(--ink-2)}
+.dmeta .sep{color:var(--line-2)}
+.dmeta .scope{border-bottom:1px dotted var(--muted);cursor:help}
+.dsrc{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.src-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 10px 3px 8px;border:1px solid var(--line);border-radius:999px;background:var(--surface);font-size:11.5px;color:var(--ink-2);transition:border-color .15s,color .15s}
+.src-chip svg{width:13px;height:13px;color:var(--good);flex-shrink:0}
+.src-chip.warn svg{color:var(--warn)}
+.src-chip:hover{border-color:var(--accent-line);color:var(--ink);text-decoration:none}
+.src-chip .ext{display:inline-flex}
+.src-chip .ext svg{width:11px;height:11px;color:var(--muted)}
+.src-lbl{font-size:11.5px;color:var(--muted);align-self:center;margin-right:2px}
+
+.hero{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);margin-bottom:16px;overflow:hidden}
+.hero-a,.stile{cursor:pointer;transition:background .15s}
+.hero-a:hover,.stile:hover{background:var(--surface-2)}
+.hero-a{padding:20px 24px 18px;border-right:1px solid var(--line)}
+.hero .lb{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:var(--ink-2)}
+.hero-fig{display:flex;align-items:baseline;gap:10px;margin-top:8px}
+.hero-fig b{font-size:52px;font-weight:700;letter-spacing:-1.6px;line-height:1}
+.hero-fig b small{font-size:24px;letter-spacing:-.4px;margin-left:2px}
+.hero-fig span{font-size:13px;color:var(--muted)}
+.hbar{position:relative;margin-top:16px;padding-top:20px}
+.hbar .segs{display:flex;gap:2px;height:10px}
+.hbar .segs i{display:block;height:100%}
+.hbar .segs i:first-child{border-radius:5px 0 0 5px}
+.hbar .segs i:last-child{border-radius:0 5px 5px 0}
+.hbar .segs i:only-child{border-radius:5px}
+.hbar .tgt{position:absolute;top:14px;bottom:-4px;border-left:2px solid var(--ink)}
+.hbar .tgt span{position:absolute;top:-16px;left:0;transform:translateX(-50%);font-size:11px;font-weight:600;color:var(--ink);white-space:nowrap}
+.hlegend{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:12px;font-size:12px;color:var(--ink-2)}
+.hlegend span{display:inline-flex;align-items:center;gap:6px}
+.hlegend i{width:9px;height:9px;border-radius:2px;display:inline-block}
+.hlegend b{color:var(--ink);font-weight:650}
+.hero-b{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+.stile{padding:20px 20px 18px;display:flex;flex-direction:column}
+.stile+.stile{border-left:1px solid var(--line)}
+.stile .v{font-size:32px;font-weight:700;letter-spacing:-.9px;line-height:1.1;margin-top:8px}
+.stile .v small{font-size:15px;font-weight:600;color:var(--muted);margin-left:4px;letter-spacing:0}
+.stile .nt{font-size:12px;color:var(--muted);margin-top:3px}
+.stile .viz{margin-top:auto;padding-top:16px}
+.sevbar{display:flex;gap:2px;height:8px}
+.sevbar i{display:block;height:100%}
+.sevbar i:first-child{border-radius:4px 0 0 4px}
+.sevbar i:last-child{border-radius:0 4px 4px 0}
+.cgrid{display:grid;gap:3px}
+.cgrid i{height:12px;border-radius:3px;display:block}
+@media (max-width:1280px){.hero{grid-template-columns:1fr}.hero-a{border-right:none;border-bottom:1px solid var(--line)}}
+@media (max-width:760px){.hero-b{grid-template-columns:1fr}.stile+.stile{border-left:none;border-top:1px solid var(--line)}}
+
+.risks .row{display:grid;grid-template-columns:74px 84px minmax(0,1fr) auto 14px;gap:14px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line);cursor:pointer;transition:background .12s}
+.risks .row:last-child{border-bottom:none}
+.risks .row:hover{background:var(--surface-2)}
+.risks .row:hover .chev{color:var(--accent-ink);transform:translateX(2px)}
+.risks .t{font-size:13px;font-weight:550;color:var(--ink);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.risks .s{font-size:11.5px;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.risks .due{font-size:12px;color:var(--ink-2);text-align:right;white-space:nowrap}
+.risks .due small{display:block;font-size:11px;color:var(--muted)}
+.risks .due.late,.risks .due.late small{color:var(--crit-ink);font-weight:600}
+.risks .chev{display:flex}
+.risks .chev svg{width:14px;height:14px;color:var(--muted);transition:transform .15s,color .15s}
+
+.stack{display:flex;flex-direction:column;gap:16px;min-width:0}
+.stack>.card:first-child{flex:1}
+.chg{display:grid;grid-template-columns:84px minmax(0,1fr) auto;gap:12px;align-items:center;padding:11px 16px;border-bottom:1px solid var(--line);cursor:pointer;transition:background .12s}
+.chg:last-child{border-bottom:none}
+.chg:hover{background:var(--surface-2)}
+.chg .t{font-size:13px;font-weight:550}
+.chg .s{font-size:11.5px;color:var(--muted);margin-top:1px}
+.areas{display:flex;flex-direction:column;gap:13px}
+.area{display:grid;grid-template-columns:148px minmax(0,1fr) 28px;gap:12px;align-items:center;cursor:pointer;border-radius:6px}
+.area .nm{font-size:12.5px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.area:hover .nm{color:var(--ink)}
+.area:hover .bar{filter:brightness(1.08)}
+.area .bar{display:flex;gap:2px;height:12px}
+.area .bar i{display:block;height:100%}
+.area .bar i:last-child{border-radius:0 4px 4px 0}
+.area .n{font-size:12.5px;font-weight:650;text-align:right;font-variant-numeric:tabular-nums}
+.alegend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--ink-2);margin-bottom:16px}
+.alegend span{display:inline-flex;align-items:center;gap:6px}
+.alegend i{width:9px;height:9px;border-radius:2px;display:inline-block}
 @keyframes tick{0%,55%{opacity:0;transform:scale(.6)}70%,100%{opacity:1;transform:scale(1)}}
 
 /* Coverage decision steps */
@@ -662,7 +745,6 @@ kbd{white-space:nowrap;font:11px ui-monospace,Consolas,monospace;padding:1px 6px
         <div class="av">MB</div>
         <div><b id="entName">Meridian Bank Limited</b><span id="entDate">Assessment date —</span></div>
       </div>
-      <span class="pill" id="modePill" title="Which engine produced the obligation extraction"><span class="d"></span><span id="modeTxt">—</span></span>
       <span class="pill" id="runPill"><span class="d"></span><span id="runTxt">Not run</span></span>
       <button class="search topsearch" id="kBtn" aria-label="Search everything (Ctrl+K)"><span id="kIco"></span><span class="muted">Search</span><kbd>Ctrl K</kbd></button>
       <button class="iconbtn" id="helpBtn" data-act="help" aria-label="Help: how to use Accentic" title="Help: sections, glossary, shortcuts"></button>
@@ -769,6 +851,8 @@ const I = {
   learn: P('<path d="M3 9l9-5 9 5-9 5z"/><path d="M7 11.5V16c0 1.5 2.2 3 5 3s5-1.5 5-3v-4.5M21 9v6"/>'),
   chat: P('<path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5"/>'),
   send: P('<path d="M12 19V5M5 12l7-7 7 7"/>'),
+  ext: P('<path d="M14 5h5v5M19 5l-8 8M17 14v5H5V7h5"/>'),
+  chev: P('<path d="M9 6l6 6-6 6"/>'),
   copy: P('<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>'),
   plus: P('<path d="M12 5v14M5 12h14"/>'),
   report: P('<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 17v-3M13 17v-5M16 17v-2"/>'),
@@ -941,13 +1025,6 @@ function paintChrome(){
   const st = S.stats, pf = S.profile;
   $('#entName').textContent = pf.name || st.bank || 'Bank';
   $('#entDate').textContent = 'Assessment as of ' + fmtDate(pf.assessment_date || st.assessment_date);
-  const ai = st.mode === 'claude', keyButNoAi = !ai && st.llm_configured && hasData();
-  $('#modePill').className = 'pill ' + (ai ? 'ai' : '');
-  $('#modeTxt').textContent = ai ? 'Claude Opus 5.5' : keyButNoAi ? 'Rule engine (API unreachable)' : 'Rule engine';
-  $('#modePill').title = ai
-    ? `${st.ai_obligations} obligations extracted and ${st.ai_remediations} remediations drafted by Claude; every quote is still verified in Python.`
-    : keyButNoAi ? 'An API key is configured but no result came from Claude on the last run, so everything shown is rule-engine output.'
-    : 'No ANTHROPIC_API_KEY: the deterministic rule engine produced these results, and they are labelled as such.';
   if(!RUN.running){
     $('#runPill').className = 'pill ' + (hasData() ? 'ok' : '');
     $('#runTxt').textContent = hasData() ? 'Last run ' + fmtTime(st.last_run) : 'Not run';
@@ -1330,33 +1407,6 @@ function meter(segs){
 }
 
 /* ---------------------------------------------------------------- Overview */
-function keyFindings(){
-  const out = [];
-  const g = S.gaps[0];
-  if(g) out.push({sev:g.severity, k:'Highest-risk gap', ob:g.obligation_id,
-    h:`${refLabel(g.regulator, g.clause_ref)} · ${CAT[g.category] || g.category}: risk ${g.risk_score.toFixed(2)}`,
-    p:`${g.rationale} Remediation: ${g.owner_role}, due ${fmtDate(g.due_date)}.`});
-  const contra = S.controls.filter(c => (c.reported_effectiveness ?? 0) >= 0.9 && c.effectiveness < 0.9)
-    .sort((a, b) => a.effectiveness - b.effectiveness);
-  const c = contra[0];
-  if(c){
-    const op = S.tests.find(t => t.control_id === c.id && ['exception', 'fail', 'overdue'].includes(t.result));
-    out.push({sev:'critical', k:'Owner self-assessment contradicted', go:'controls',
-      h:`${c.control_ref} ${c.title} is reported “${c.test_result}”, but independent testing finds ${String(c.independent_result).toLowerCase()}`,
-      p: op ? op.conclusion : ''});
-  }
-  const sg = S.gaps.find(x => x.gap_type === 'scope_gap');
-  if(sg) out.push({sev:sg.severity, k:'Control scope gap', ob:sg.obligation_id,
-    h:`${refLabel(sg.regulator, sg.clause_ref)}: no control reaches ${sg.scope_gap}`, p:sg.rationale});
-  const k = S.conflicts[0];
-  if(k) out.push({sev:k.severity, k:'Cross-regulation conflict', go:'conflicts',
-    h:`${refLabel(k.regulator_a, k.clause_a)} vs ${refLabel(k.regulator_b, k.clause_b)}`, p:k.explanation});
-  const ch = S.changes.find(x => /→/.test(x.summary));
-  if(ch) out.push({sev:'high', k:'Regulatory change', go:'changes', h:ch.summary,
-    p:`${ch.affected_count} obligation(s) under this clause re-assessed against the current controls.`});
-  return out;
-}
-
 function heatBands(g){
   const i = g.impact >= 0.8 ? 2 : g.impact >= 0.5 ? 1 : 0;
   const l = g.likelihood >= 0.7 ? 2 : g.likelihood >= 0.4 ? 1 : 0;
@@ -1406,62 +1456,128 @@ function coverageByDomain(){
 }
 const groupBy = (arr, f) => arr.reduce((m, x) => ((m[f(x)] ||= []).push(x), m), {});
 
+const AREA_NAME = c => c === 'other' ? 'Other requirements' : (CAT[c] || c);
+function sourceChips(){
+  const regs = (S.docs || []).filter(d => d.kind === 'regulation' && d.official_url);
+  const chips = regs.map(d => {
+    const v = /Updated as on (.+)/.exec(d.version || '');
+    const when = v && !isNaN(new Date(v[1])) ? new Date(v[1]).toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'}) : '';
+    const label = regShort(d.title, d.regulator) + (when ? ` · updated ${when}` : ' · official text');
+    const tip = `<b>${esc(d.title || d.name)}</b>${d.version ? '<br>' + esc(d.version) : ''}<br>${esc(d.publisher || '')}${d.retrieved_on ? ' · downloaded ' + esc(fmtDate(d.retrieved_on)) : ''}`;
+    return `<a class="src-chip" href="${esc(d.official_url)}" target="_blank" rel="noopener" data-tip="${esc(tip)}">${I.check}${esc(label)}<span class="ext">${I.ext}</span></a>`;
+  });
+  const sn = S.monitoring?.sanctions;
+  if(sn){
+    const h = sn.age_hours, ago = h < 1 ? 'under an hour ago' : h < 48 ? `${Math.round(h)}h ago` : `${Math.round(h / 24)} days ago`;
+    const tip = `<b>UN Security Council Consolidated List</b><br>${sn.individuals} individuals, ${sn.entities} entities<br>RBI ¶58 requires daily verification`;
+    chips.push(`<button class="src-chip ${sn.stale ? 'warn' : ''}" data-go="monitoring" data-tip="${esc(tip)}">${sn.stale ? I.warn : I.check}UN sanctions list · ${sn.stale ? 'verification overdue' : 'verified ' + ago}</button>`);
+  } else {
+    chips.push(`<button class="src-chip warn" data-go="monitoring">${I.warn}UN sanctions list · not synced</button>`);
+  }
+  return chips.join('');
+}
 PAGES.overview = () => {
-  if(!hasData()) return head('Executive summary', 'Agentic assessment of the bank’s compliance posture against its regulatory obligations.') + card('Get started', needRun());
+  if(!hasData()) return head('Compliance posture', 'Run the analysis to assess the bank against its regulatory obligations.') + card('Get started', needRun());
   const st = S.stats, pf = S.profile, ap = pf.risk_appetite || {};
   const cov = st.coverage || {}, sev = st.severity || {};
   const full = cov.full || 0, mapped = st.applicable || 0;
   const scope = S.obligations.filter(o => o.scope_gap).length;
-  const breach = st.coverage_pct < (ap.min_coverage_pct ?? 0);
-  const kpi = (lbl, v, unit, note, m, page) => `<div class="card kpi" data-go="${page}" tabindex="0" role="link">
-    <div class="lb">${lbl}</div><div class="v">${v}${unit ? `<small>${unit}</small>` : ''}</div><div class="nt">${note}</div>${m || ''}</div>`;
-  const tiles = [
-    kpi('Obligations fully covered', st.coverage_pct, '%', `${full} of ${mapped} · target ${ap.min_coverage_pct ?? '—'}%`,
-      meter([['Full', full, 'var(--good)'], ['Partial', (cov.partial || 0) - scope, 'var(--warn)'], ['Scope gap', scope, 'var(--serious)'], ['None', cov.none || 0, 'var(--crit)']]), 'mapping'),
-    kpi('Open gaps', st.gap, '', `${sev.critical || 0} critical · ${sev.high || 0} high`,
-      meter(SEV.map(s => [cap(s), sev[s] || 0, SEV_COLOR[s]])), 'gaps'),
-    kpi('Controls failing tests', st.failing_controls, `of ${st.control}`, `${st.contradicted_controls} contradict the owner’s result`, '', 'controls'),
-    kpi('Proven from source', st.verification_pct, '%', `${st.verified_obligations} of ${st.obligation} obligations`,
-      `<div class="proof" aria-hidden="true"><i></i><i class="hit"></i><i></i><i></i>${I.check}</div>`, 'verify'),
-  ];
-  const urgent = (sev.critical || 0) + (sev.high || 0);
-  const verdict = `<div class="callout ${breach ? 'crit' : 'ok'}" style="margin-bottom:16px">${breach ? I.alert : I.check}<div>
-      <b>${breach ? `Coverage is ${st.coverage_pct}%, below the ${ap.min_coverage_pct}% target.` : `Coverage is ${st.coverage_pct}%, within the ${ap.min_coverage_pct ?? '—'}% target.`}</b>
-      ${urgent ? `${urgent} critical or high gaps need an owner’s attention.` : 'No critical or high gaps are open.'}
-      <button class="btn sm" data-go="gaps" style="margin-left:6px">See the gaps ${I.arrow}</button></div></div>`;
+  const target = ap.min_coverage_pct ?? 0, breach = st.coverage_pct < target;
+
+  const sc = pf.assessment_scope;
+  const scopeTip = sc ? `<b>${esc(sc.label)}</b><br>${Object.entries(sc.paragraphs).map(([g, p]) => esc(g === 'GoI' ? `PMLA r.${p}` : `${g} ¶${p}`)).join('<br>')}` : '';
+  const header = `<div class="dhead"><h2>Compliance posture</h2>
+    <div class="dmeta"><span class="${sc ? 'scope' : ''}" ${sc ? `data-tip="${esc(scopeTip)}"` : ''}>${sc ? 'Thematic review' : 'Full review'} of ${mapped} obligations</span>
+      <span class="sep">·</span><span>Every number links to the exact source text behind it</span></div>
+    <div class="dsrc"><span class="src-lbl">Official sources</span>${sourceChips()}</div></div>`;
+
+  // Hero: the one number the dashboard leads with, and where the rest stand against target.
+  const segs = [['Full', full, 'var(--good)'], ['Partial', Math.max(0, (cov.partial || 0) - scope), 'var(--warn)'],
+                ['Scope gap', scope, 'var(--serious)'], ['None', cov.none || 0, 'var(--crit)']];
+  const total = segs.reduce((s, x) => s + x[1], 0) || 1;
+  const heroA = `<div class="hero-a" data-go="mapping" tabindex="0" role="link">
+      <div class="lb">Obligations fully covered <span class="chip ${breach ? 'critical' : 'good'}"><span class="d"></span>${breach ? 'Below target' : 'On target'}</span></div>
+      <div class="hero-fig"><b>${st.coverage_pct}<small>%</small></b><span>${full} of ${mapped} met by a tested control</span></div>
+      <div class="hbar"><div class="segs">${segs.filter(s => s[1]).map(([l, n, c]) =>
+          `<i style="width:${100 * n / total}%;background:${c}" data-tip="<b>${l}</b>: ${n} of ${total}"></i>`).join('')}</div>
+        ${target ? `<div class="tgt" style="left:${target}%"><span>Target ${target}%</span></div>` : ''}</div>
+      <div class="hlegend">${segs.map(([l, n, c]) => `<span><i style="background:${c}"></i>${l} <b>${n}</b></span>`).join('')}</div></div>`;
+
+  const ctrls = [...S.controls].sort((a, b) => a.effectiveness - b.effectiveness);
+  const cState = c => c.effectiveness < 0.6 ? ['var(--crit)', 'Failing'] : c.effectiveness < 0.9 ? ['var(--warn)', 'Weak'] : ['var(--good)', 'Effective'];
+  const tile = (lbl, v, nt, viz, page) => `<div class="stile" data-go="${page}" tabindex="0" role="link">
+      <div class="lb">${lbl}</div><div class="v">${v}</div><div class="nt">${nt}</div><div class="viz">${viz}</div></div>`;
+  const heroB = `<div class="hero-b">`
+    + tile('Open gaps', st.gap, `${sev.critical || 0} critical · ${sev.high || 0} high`,
+        `<div class="sevbar">${SEV.filter(s => sev[s]).map(s => `<i style="flex:${sev[s]};background:${SEV_COLOR[s]}" data-tip="<b>${cap(s)}</b>: ${sev[s]} gaps"></i>`).join('')}</div>`, 'gaps')
+    + tile('Controls failing tests', `${st.failing_controls}<small>of ${st.control}</small>`, `${st.contradicted_controls} contradict the owner’s own result`,
+        `<div class="cgrid" style="grid-template-columns:repeat(${ctrls.length},minmax(0,1fr))">${ctrls.map(c => { const [col, word] = cState(c);
+          const tip = `<b>${esc(c.control_ref)}</b> · ${word}<br>Owner says: ${esc(c.test_result || '—')}<br>Independent test: ${esc(c.independent_result || '—')}`;
+          return `<i style="background:${col}" data-tip="${esc(tip)}"></i>`; }).join('')}</div>`, 'controls')
+    + tile('Proven from source', `${st.verification_pct}<small>%</small>`, `${st.verified_obligations} of ${st.obligation} obligations re-slice exactly`,
+        `<div class="proof" aria-hidden="true" style="margin-top:0"><i></i><i class="hit"></i><i></i><i></i>${I.check}</div>`, 'verify')
+    + `</div>`;
+
+  // Priority actions: one line per gap, ranked by risk.
+  const top = S.gaps.slice(0, 6);
+  const clean = s => (s || '').replace(/\s+/g, ' ').replace(/^\W*(?:\(\w+\)|\d+[A-Z]?\.)\s*/, '').trim();
+  const rows = top.map(g => `<div class="row" data-ob="${g.obligation_id}" tabindex="0" role="button">
+      <span class="chip ${g.severity}"><span class="d"></span>${cap(g.severity)}</span>
+      <span class="ref">${esc(refLabel(g.regulator, g.clause_ref))}</span>
+      <div style="min-width:0"><div class="t">${esc(clean(g.excerpt))}</div>
+        <div class="s">${esc(AREA_NAME(g.category))} · ${esc(GAP_TYPE[g.gap_type] || g.gap_type)}${g.control_ref ? ' · ' + esc(g.control_ref) : ''} · ${esc(g.owner_role || '')}</div></div>
+      <span class="due ${g.overdue ? 'late' : ''}">${g.overdue ? 'Overdue' : esc(fmtDate(g.due_date))}<small>${g.overdue ? 'since ' + esc(fmtDate(g.due_date)) : 'due'}</small></span>
+      <span class="chev">${I.chev}</span></div>`).join('');
+
+  // Gaps by area: where the open gaps cluster, by severity.
+  const byCat = groupBy(S.gaps, g => g.category);
+  const cats = Object.keys(byCat).sort((a, b) => (a === 'other') - (b === 'other') || byCat[b].length - byCat[a].length);
+  const maxN = Math.max(1, ...cats.map(c => byCat[c].length));
+  const areas = `<div class="alegend">${SEV.map(s => `<span><i style="background:${SEV_COLOR[s]}"></i>${cap(s)}</span>`).join('')}</div>
+    <div class="areas">${cats.map(c => { const n = groupCount(byCat[c], g => g.severity);
+      return `<div class="area" data-act="area" data-cat="${esc(c)}" tabindex="0" role="button">
+        <span class="nm">${esc(AREA_NAME(c))}</span>
+        <div class="bar" style="width:${100 * byCat[c].length / maxN}%">${SEV.filter(s => n[s]).map(s =>
+          `<i style="flex:${n[s]};background:${SEV_COLOR[s]}" data-tip="<b>${esc(AREA_NAME(c))}</b><br>${cap(s)}: ${n[s]}"></i>`).join('')}</div>
+        <span class="n">${byCat[c].length}</span></div>`; }).join('')}</div>`;
+
   const links = [
     ['Regulations', st.regulation, 'IngestionAgent', 'sources'], ['Obligations', st.obligation, 'ObligationAgent', 'obligations'],
     ['Applicability', st.applicable, 'ApplicabilityAgent', 'profile'], ['Controls', st.control, 'ControlAgent', 'controls'],
     ['Evidence', st.evidence, 'ControlAgent', 'controls'], ['Testing', st.control_test, 'TestingAgent', 'controls'],
     ['Gaps', st.gap, 'GapAgent', 'gaps'], ['Remediation', st.remediation, 'GapAgent', 'remediation'],
     ['Monitoring', st.monitor_alert, 'MonitoringAgent', 'monitoring']];
-  const findings = keyFindings().slice(0, 3);
-  return head(`Compliance posture · ${pf.name || ''}`,
-      `${S.regs.map(r => esc(regShort(r.title, r.regulator))).join(' and ')}, as of ${esc(fmtDate(pf.assessment_date))}.`
-      + (pf.assessment_scope ? ` ${esc(pf.assessment_scope.label)} (${Object.entries(pf.assessment_scope.paragraphs).map(([g, p]) => esc(g === 'GoI' ? `PMLA r.${p}` : `${g} ¶${p}`)).join('; ')}).` : '')
-      + ` Select anything to see the source text behind it.`,
-      `<button class="btn" data-act="tour">${I.compass}Take the tour</button>`)
-    + verdict
-    + `<div class="kpis">${tiles.join('')}</div>`
+
+  return header
+    + `<section class="card hero">${heroA}${heroB}</section>`
     + `<div class="grid g-7-5">`
-    + card('What needs attention', findings.map(f => `<div class="finding" ${f.ob ? `data-ob="${f.ob}"` : `data-go="${f.go}"`} tabindex="0" role="button">
-        <div class="bar" style="background:${SEV_COLOR[f.sev] || 'var(--low)'}"></div>
-        <div class="k">${esc(f.k)} · ${esc(cap(f.sev))}</div><div class="h">${esc(f.h)}</div><div class="p clamp">${esc(f.p)}</div></div>`).join(''),
-        {flush:true, right:`<button class="btn sm ghost" data-go="gaps">All issues ${I.arrow}</button>`})
-    + card('Where the risk sits', heatmap() + `<p class="muted" style="font-size:12px;margin-top:12px">Open gaps by impact and likelihood. Select a cell to see them.</p>`)
-    + `</div>`
-    + `<div class="mt">` + card('Next fixes', table('ovRem', [
-        {k:'priority', h:'Priority', r:g => `<span class="chip ${g.severity}"><span class="d"></span>P${g.priority}</span>`},
-        {k:'clause_ref', h:'Reference', r:g => `<span class="ref">${esc(refLabel(g.regulator, g.clause_ref))}</span>`},
-        {k:'action', h:'Action', cls:'wrap', r:g => `<div class="clamp">${esc(g.action)}</div>`},
-        {k:'owner_role', h:'Owner'},
-        {k:'due_date', h:'Due', r:g => esc(fmtDate(g.due_date))},
-      ], S.gaps.slice(0, 5), {onRow:g => `data-ob="${g.obligation_id}" tabindex="0"`}),
-        {flush:true, right:`<button class="btn sm ghost" data-go="remediation">Action board ${I.arrow}</button>`}) + `</div>`
+    + card('Priority actions', `<div class="risks">${rows}</div>`,
+        {flush:true, sub:`Top ${top.length} of ${st.gap} open gaps, ranked by risk`, right:`<button class="btn sm ghost" data-go="gaps">All issues ${I.arrow}</button>`})
+    + `<div class="stack">`
+    + card('Gaps by area', areas + `<p class="muted" style="font-size:11.5px;margin-top:16px">Select an area to open its gaps.</p>`,
+        {sub:`${st.gap} open gaps`})
+    + changesCard()
+    + `</div></div>`
     + `<div class="mt">` + card('How it works', `<div class="flowwrap"><div class="flow"><div class="track"><i></i></div>${links.map(([l, n, a, p]) =>
         `<button class="fnode" data-go="${p}" data-tip="<b>${l}</b><br>Owned by ${a}"><span class="dot num">${n ?? 0}</span><span class="fl">${l}</span></button>`).join('')}</div></div>`,
         {sub:'Select a step to open it', flush:true}) + `</div>`;
 };
+function changesCard(){
+  const prior = (S.docs || []).find(d => d.kind === 'prior');
+  const v = /Updated as on (.+)/.exec(prior?.version || '');
+  const since = v && !isNaN(new Date(v[1])) ? new Date(v[1]).toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'}) : 'the previous version';
+  const rows = S.changes.slice(0, 3).map(c => {
+    const moved = /→/.test(c.summary);
+    return `<div class="chg" data-go="changes" tabindex="0" role="link">
+      <span class="ref">${esc(refLabel(c.regulator, c.clause_path))}</span>
+      <div style="min-width:0"><div class="t">${esc(cap(c.change_type))}${moved ? ' · a number moved' : ' · wording only'}</div>
+        <div class="s">${c.affected_count ? `${c.affected_count} obligation${c.affected_count > 1 ? 's' : ''} re-assessed` : 'No obligations affected'}</div></div>
+      <span class="chip ${moved ? 'high' : 'low'}"><span class="d"></span>${moved ? 'Review' : 'Low impact'}</span></div>`;
+  }).join('');
+  return card('What changed', rows || `<div class="empty" style="padding:18px 16px">No changes against ${esc(since)}.</div>`,
+    {flush:true, sub:`vs ${esc(since)}`, right:`<button class="btn sm ghost" data-go="changes">Details ${I.arrow}</button>`});
+}
+ACTIONS.area = t => { (UI.f.gap ||= {}).cat = t.dataset.cat; UI.heat = null; go('gaps'); };
 
 /* ---------------------------------------------------------------- Ask Accentic */
 const QA_SUGGEST = [
@@ -2591,10 +2707,10 @@ function choosePalette(x){
    ===================================================================== */
 const TOUR = [
   {r:'overview', sel:'#nav', t:'Five places, each answering one question', b:'Issues & actions: what is wrong and who is fixing it. Regulations: what the rules require. Our controls: how well we meet them. Monitoring & proof: alerts and evidence. Pages inside each place appear as tabs at the top.'},
-  {r:'overview', sel:'.callout', t:'The verdict first', b:'One line tells you whether the bank is inside its risk appetite, and where to go next. The Help button explains every term you will see.'},
-  {r:'overview', sel:'.kpis', t:'Four numbers that matter', b:'Coverage, open gaps, failing controls and how much is proven from source, all from the latest run. Every number links to the register behind it.'},
+  {r:'overview', sel:'.hero-a', t:'The verdict first', b:'One number: how many obligations in scope are fully met by a tested control, against the bank’s target. The bar shows where the rest stand. The Help button explains every term you will see.'},
+  {r:'overview', sel:'.hero-b', t:'Three numbers behind it', b:'Open gaps by severity, controls that fail independent testing (one square per control), and how much of the register is proven from source. Every number links to the register behind it.'},
   {r:'overview', sel:'.flow', t:'The chain the problem defines', b:'Regulations → obligations → applicability → controls → evidence → testing → gaps → remediation → monitoring. Hover a step to see the agent that owns it.'},
-  {r:'overview', sel:'.finding', t:'Findings you can prove', b:'Select any finding to open its full traceability chain, from the exact clause text through to the remediation task.'},
+  {r:'overview', sel:'.risks', t:'What to fix first', b:'The highest-risk gaps, each quoting the clause it comes from. Select one to open its full traceability chain, from the exact clause text through to the remediation task.'},
   {r:'overview', sel:'#chatFab', t:'Ask in plain English, from any page', b:'The chat button opens Accentic’s assistant. Answers come only from the ingested regulations, and each citation is located word for word in the source before it is shown.'},
   {r:'verify', sel:'#claim', t:'Try to break it', b:'Paste a real sentence and it resolves to its clause and offsets. Change one number and it is rejected. This is the same gate the pipeline uses.'},
   {r:'controls', sel:'.callout.crit', t:'The owner says effective. The evidence disagrees.', b:'Control tests are re-performed from the evidence, so a self-assessed “Effective” cannot hide a breached deadline.'},

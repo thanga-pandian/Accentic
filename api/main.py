@@ -48,7 +48,11 @@ async def require_token(request: Request, call_next):
         if not hmac.compare_digest(supplied.encode(), API_TOKEN.encode()):
             return JSONResponse({"detail": "A valid access token is required for this action."},
                                 status_code=401)
-    return await call_next(request)
+    response = await call_next(request)
+    # The viewer is one HTML file: make browsers revalidate it so an update shows on reload.
+    if path == "/" or path.endswith(".html"):
+        response.headers["Cache-Control"] = "no-cache"
+    return response
 
 
 def rows(cur):
